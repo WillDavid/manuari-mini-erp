@@ -16,7 +16,7 @@
           <tr>
             <th>Nome</th>
             <th>Código</th>
-            <th>Preço Compra</th>
+            <th>Preço Custo</th>
             <th>Preço Venda</th>
             <th>Estoque</th>
             <th>Status</th>
@@ -28,7 +28,7 @@
             <tr v-for="p in produtos" :key="p.id">
                 <td data-label="Nome">{{ p.nome }}</td>
                 <td data-label="Código">{{ p.codigo }}</td>
-                <td data-label="Preço Compra">R$ {{ formatarPreco(p.preco_compra) }}</td>
+                <td data-label="Preço Custo">R$ {{ formatarPreco(p.preco_custo) }}</td>
                 <td data-label="Preço Venda">R$ {{ formatarPreco(p.preco_venda) }}</td>
                 <td data-label="Estoque">{{ p.estoque }}</td>
                 <td data-label="Status">
@@ -76,7 +76,7 @@ export default {
       produto: {
         nome: '',
         codigo: '',
-        preco_compra: 0,
+        preco_custo: 0,
         preco_venda: 0,
         estoque: 0,
         ativo: true
@@ -108,7 +108,7 @@ export default {
     editarProduto(p) {
       this.produto = {
         ...p,
-        preco_compra: this.formatarInput(p.preco_compra),
+        preco_custo: this.formatarInput(p.preco_custo),
         preco_venda: this.formatarInput(p.preco_venda)
       }
 
@@ -161,7 +161,7 @@ export default {
       this.produto = {
         nome: '',
         codigo: '',
-        preco_compra: 0,
+        preco_custo: 0,
         preco_venda: 0,
         estoque: 0,
         ativo: true

@@ -21,8 +21,8 @@
 
         <div class="row">
           <div class="field">
-            <label>Preço de Compra (R$)</label>
-            <input v-model="localProduto.preco_compra" />
+            <label>Preço Custo (R$)</label>
+            <input v-model="localProduto.preco_custo" />
           </div>
 
           <div class="field">
@@ -77,7 +77,7 @@ export default {
     submit() {
       const produtoTratado = {
         ...this.localProduto,
-        preco_compra: this.parseMoney(this.localProduto.preco_compra),
+        preco_custo: this.parseMoney(this.localProduto.preco_venda),
         preco_venda: this.parseMoney(this.localProduto.preco_venda)
       }
 
