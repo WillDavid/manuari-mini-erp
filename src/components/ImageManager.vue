@@ -1,0 +1,117 @@
+<template>
+  <div>
+
+    <div class="grid">
+      <div v-for="(img, i) in modelValue" :key="i" class="card">
+        <img :src="img" />
+
+        <div class="actions">
+          <button @click="remover(i)">✕</button>
+          <button @click="subir(i)">↑</button>
+          <button @click="descer(i)">↓</button>
+        </div>
+      </div>
+    </div>
+
+    <input type="file" @change="upload" />
+
+  </div>
+</template>
+
+<script>
+import { supabase } from '../services/supabase'
+
+export default {
+  props: ['modelValue'],
+  emits: ['update:modelValue'],
+
+  methods: {
+    atualizar(v) {
+      this.$emit('update:modelValue', v)
+    },
+
+    remover(i) {
+      const arr = [...this.modelValue]
+      arr.splice(i, 1)
+      this.atualizar(arr)
+    },
+
+    subir(i) {
+      if (i === 0) return
+      const arr = [...this.modelValue]
+      ;[arr[i], arr[i-1]] = [arr[i-1], arr[i]]
+      this.atualizar(arr)
+    },
+
+    descer(i) {
+      const arr = [...this.modelValue]
+      if (i === arr.length - 1) return
+      ;[arr[i], arr[i+1]] = [arr[i+1], arr[i]]
+      this.atualizar(arr)
+    },
+
+    async upload(e) {
+  const file = e.target.files[0]
+  if (!file) return
+
+  const sanitizeFileName = (name) => {
+    return name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, "_")
+      .replace(/[^a-zA-Z0-9._-]/g, "")
+  }
+
+  const cleanName = sanitizeFileName(file.name)
+
+  // 👇 pega tipo do produto (IMPORTANTE)
+  const tipo = this.$parent.local.tipo || 'outros'
+
+  const path = `${tipo}/${Date.now()}-${cleanName}`
+
+  const { error } = await supabase.storage
+    .from('products')
+    .upload(path, file, { upsert: true })
+
+  if (error) {
+    console.error(error)
+    alert(error.message)
+    return
+  }
+
+  const { data } = supabase.storage
+    .from('products')
+    .getPublicUrl(path)
+
+  this.atualizar([...this.modelValue, data.publicUrl])
+}
+  }
+}
+</script>
+
+<style scoped>
+.grid {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.card {
+  position: relative;
+}
+
+img {
+  width: 100px;
+  height: 100px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.actions {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 4px;
+}
+</style>
