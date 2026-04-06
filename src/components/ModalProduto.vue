@@ -77,7 +77,7 @@ export default {
     submit() {
       const produtoTratado = {
         ...this.localProduto,
-        preco_custo: this.parseMoney(this.localProduto.preco_venda),
+        preco_custo: this.parseMoney(this.localProduto.preco_custo),
         preco_venda: this.parseMoney(this.localProduto.preco_venda)
       }
 
