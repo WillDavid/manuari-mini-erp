@@ -209,6 +209,7 @@ export default {
     fecharModal() {
       this.modalAberto = false
       this.vendaEditando = null
+      this.isLoading = false
     },
 
     async salvarVenda(venda) {
@@ -217,9 +218,10 @@ export default {
 
   try {
 
-    // 🧠 VALIDAÇÃO INTELIGENTE (considera edição)
+    // VALIDAÇÃO DE ESTOQUE
+    const errosEstoque = []
+    
     for (const item of venda.itens) {
-
       const { data: produto } = await supabase
         .from('produtos_erp')
         .select('estoque, nome')
@@ -228,21 +230,23 @@ export default {
 
       let estoqueDisponivel = produto.estoque || 0
 
-      // 👉 se estiver editando, soma estoque antigo
       if (this.vendaEditando) {
         const itemAntigo = this.vendaEditando.itens.find(
           i => i.produto_id === item.produto_id
         )
-
         if (itemAntigo) {
           estoqueDisponivel += itemAntigo.quantidade
         }
       }
 
       if (estoqueDisponivel < item.quantidade) {
-        alert(`Sem estoque para ${produto.nome}`)
-        return
+        errosEstoque.push(`${produto.nome} (disponível: ${estoqueDisponivel})`)
       }
+    }
+
+    if (errosEstoque.length > 0) {
+      alert(`Estoque insuficiente:\n${errosEstoque.join('\n')}\n\nAjuste as quantidades e tente novamente.`)
+      return
     }
 
     const payload = {
