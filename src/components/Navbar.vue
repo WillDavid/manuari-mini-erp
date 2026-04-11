@@ -59,6 +59,10 @@
         <button class="menu-btn" @click="menuAberto = !menuAberto">
           ☰
         </button>
+
+        <button class="logout-btn" @click="logout" title="Sair">
+          ⏻
+        </button>
       </div>
     </div>
   </header>
@@ -119,6 +123,11 @@ export default {
     fecharMenus() {
       this.menuAberto = false
       this.alertasAbertos = false
+    },
+
+    logout() {
+      localStorage.removeItem('authExpires')
+      this.$router.push('/identificar')
     },
 
     fecharDropdownExterno(event) {
@@ -337,6 +346,17 @@ export default {
   border-radius: 12px;
   cursor: pointer;
   color: var(--text);
+}
+
+.logout-btn {
+  width: 42px;
+  height: 42px;
+  font-size: 18px;
+  background: var(--danger-soft);
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--danger);
 }
 
 @media (max-width: 768px) {

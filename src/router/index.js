@@ -4,19 +4,34 @@ import VendasView from '../views/VendasView.vue'
 import EstoqueView from '../views/EstoqueView.vue'
 import VitrineView from '../views/VitrineView.vue'
 import FinanceiroView from '../views/FinanceiroView.vue'
+import UserIdentifier from '../components/UserIdentifier.vue'
 
 const routes = [
-  { path: '/', redirect: '/vendas' },
-  { path: '/produtos', component: ProdutosView },
-  { path: '/vendas', component: VendasView },
-  { path: '/estoque', component: EstoqueView },
-  { path: '/vitrine', component: VitrineView },
-  { path: '/financeiro', component: FinanceiroView }
+  { path: '/', redirect: '/identificar' },
+  { path: '/identificar', component: UserIdentifier },
+  { path: '/produtos', component: ProdutosView, meta: { requiresAuth: true } },
+  { path: '/vendas', component: VendasView, meta: { requiresAuth: true } },
+  { path: '/estoque', component: EstoqueView, meta: { requiresAuth: true } },
+  { path: '/vitrine', component: VitrineView, meta: { requiresAuth: true } },
+  { path: '/financeiro', component: FinanceiroView, meta: { requiresAuth: true } }
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+router.beforeEach((to, from, next) => {
+  const expiration = localStorage.getItem('authExpires')
+  const isLogged = expiration && Date.now() < parseInt(expiration)
+
+  if (to.meta.requiresAuth && !isLogged) {
+    next('/identificar')
+  } else if (to.path === '/identificar' && isLogged) {
+    next('/vendas')
+  } else {
+    next()
+  }
 })
 
 export default router
