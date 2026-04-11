@@ -1,10 +1,10 @@
 <template>
   <div class="page">
 
-    <!-- BANNER EM CONSTRUCAO -->
+    <!-- BANNER -->
     <div class="construction-banner">
-      <span class="badge">Em construcao</span>
-      <p>Esta area esta em desenvolvimento. Funcionalidades serao adicionadas em breve.</p>
+      <span class="badge">Novo</span>
+      <p>Contas integradas com vendas. Clique em "Receber" para gerar uma nova conta.</p>
     </div>
 
     <!-- HEADER -->
@@ -15,110 +15,199 @@
       </button>
     </div>
 
-    <!-- RESUMO -->
-    <div class="resumo-cards">
-      <div class="card resumo">
-        <span class="label">Saldo Atual</span>
-        <span class="valor" :class="saldoGeral >= 0 ? 'positivo' : 'negativo'">
-          R$ {{ formatarPreco(saldoGeral) }}
-        </span>
-      </div>
-
-      <div class="card entrada">
-        <span class="label">Entradas</span>
-        <span class="valor positivo">R$ {{ formatarPreco(totalEntradas) }}</span>
-      </div>
-
-      <div class="card saida">
-        <span class="label">Saídas</span>
-        <span class="valor negativo">R$ {{ formatarPreco(totalSaidas) }}</span>
-      </div>
+    <!-- ABAS -->
+    <div class="tabs">
+      <button
+        :class="['tab', abaAtiva === 'resumo' ? 'active' : '']"
+        @click="abaAtiva = 'resumo'"
+      >
+        Resumo
+      </button>
+      <button
+        :class="['tab', abaAtiva === 'receber' ? 'active' : '']"
+        @click="abaAtiva = 'receber'"
+      >
+        Receber
+        <span v-if="contasReceberPendentes > 0" class="tab-badge">{{ contasReceberPendentes }}</span>
+      </button>
+      <button
+        :class="['tab', abaAtiva === 'pagar' ? 'active' : '']"
+        @click="abaAtiva = 'pagar'"
+      >
+        Pagar
+        <span v-if="contasPagarPendentes > 0" class="tab-badge warning">{{ contasPagarPendentes }}</span>
+      </button>
     </div>
 
-    <!-- FILTROS -->
-    <div class="filtros">
-      <input
-        v-model="busca"
-        placeholder="Buscar por descricao..."
-        class="input busca"
-      />
+    <!-- RESUMO / FLUXO DE CAIXA -->
+    <div v-if="abaAtiva === 'resumo'" class="aba-content">
 
-      <select v-model="filtroTipo" class="input">
-        <option value="">Todos os tipos</option>
-        <option value="entrada">Entrada</option>
-        <option value="saida">Saída</option>
-      </select>
-    </div>
+      <!-- RESUMO FINANCEIRO -->
+      <div class="resumo-cards">
+        <div class="card resumo">
+          <span class="label">Saldo Atual</span>
+          <span class="valor" :class="fluxo.saldoAtual >= 0 ? 'positivo' : 'negativo'">
+            R$ {{ formatarPreco(fluxo.saldoAtual) }}
+          </span>
+        </div>
 
-    <!-- TABELA -->
-    <div class="table-card">
-      <table>
-        <thead>
-          <tr>
-            <th>Data</th>
-            <th>Tipo</th>
-            <th>Descricao</th>
-            <th>Valor</th>
-            <th>Forma Pagamento</th>
-            <th></th>
-          </tr>
-        </thead>
+        <div class="card entrada">
+          <span class="label">Recebido</span>
+          <span class="valor positivo">R$ {{ formatarPreco(fluxo.entradas) }}</span>
+        </div>
 
-        <tbody>
-          <tr v-for="m in movimentacoesPaginadas" :key="m.id">
-            <td data-label="Data">{{ formatarData(m.data) }}</td>
-
-            <td data-label="Tipo">
-              <span :class="m.tipo === 'entrada' ? 'tipo-entrada' : 'tipo-saida'">
-                {{ m.tipo === 'entrada' ? 'Entrada' : 'Saída' }}
-              </span>
-            </td>
-
-            <td data-label="Descricao">{{ m.descricao }}</td>
-
-            <td data-label="Valor" :class="m.tipo === 'entrada' ? 'positivo' : 'negativo'">
-              {{ m.tipo === 'entrada' ? '+' : '-' }}R$ {{ formatarPreco(m.valor) }}
-            </td>
-
-            <td data-label="Forma Pagamento">{{ m.forma_pagamento }}</td>
-
-            <td data-label="Ações" class="actions">
-              <button class="edit" @click="editarMovimentacao(m)">Editar</button>
-              <button class="delete" @click="deletarMovimentacao(m.id)">Excluir</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div v-if="movimentacoesFiltradas.length" class="pagination">
-      <div class="pagination-meta">
-        <label class="pagination-select">
-          <span>Mostrar</span>
-          <select v-model.number="itensPorPagina">
-            <option :value="10">10</option>
-            <option :value="20">20</option>
-            <option :value="50">50</option>
-            <option :value="100">100</option>
-          </select>
-        </label>
-
-        <span class="pagination-info">
-          {{ movimentacoesFiltradas.length }} resultado(s) • Pagina {{ paginaAtual }} de {{ totalPaginas }}
-        </span>
+        <div class="card saida">
+          <span class="label">Pago</span>
+          <span class="valor negativo">R$ {{ formatarPreco(fluxo.saidas) }}</span>
+        </div>
       </div>
 
-      <div class="pagination-actions">
-        <button :disabled="paginaAtual === 1" @click="irParaPagina(paginaAtual - 1)">
-          Anterior
-        </button>
-        <button :disabled="paginaAtual === totalPaginas" @click="irParaPagina(paginaAtual + 1)">
-          Proxima
-        </button>
+      <div class="resumo-cards secondary">
+        <div class="card">
+          <span class="label">A Receber</span>
+          <span class="valor pendente">R$ {{ formatarPreco(fluxo.pendentesReceber) }}</span>
+        </div>
+
+        <div class="card">
+          <span class="label">A Pagar</span>
+          <span class="valor pendente">R$ {{ formatarPreco(fluxo.pendentesPagar) }}</span>
+        </div>
+
+        <div class="card projecao">
+          <span class="label">Saldo Projetado</span>
+          <span class="valor" :class="fluxo.saldoProjetado >= 0 ? 'positivo' : 'negativo'">
+            R$ {{ formatarPreco(fluxo.saldoProjetado) }}
+          </span>
+        </div>
       </div>
+
     </div>
 
-    <!-- MODAL -->
+    <!-- CONTAS A RECEBER -->
+    <div v-if="abaAtiva === 'receber'" class="aba-content">
+
+      <!-- TABELA CONTAS A RECEBER -->
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Descricao</th>
+              <th>Valor</th>
+              <th>Forma</th>
+              <th>Parcelas</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr v-for="conta in contasReceberPaginadas" :key="conta.id">
+              <td data-label="Data">{{ formatarData(conta.data_venda) }}</td>
+              <td data-label="Descricao">{{ conta.descricao }}</td>
+              <td data-label="Valor" :class="conta.status === 'recebido' ? 'positivo' : ''">
+                R$ {{ formatarPreco(conta.valor) }}
+              </td>
+              <td data-label="Forma">{{ conta.forma_pagamento }}</td>
+              <td data-label="Parcelas">{{ conta.parcelas || 1 }}x</td>
+              <td data-label="Status">
+                <span :class="['status-badge', conta.status]">
+                  {{ conta.status === 'recebido' ? 'Recebido' : 'Pendente' }}
+                </span>
+              </td>
+              <td data-label="Ações" class="actions">
+                <button
+                  v-if="conta.status === 'pendente'"
+                  class="confirm"
+                  @click="marcarRecebido(conta.id)"
+                >
+                  Receber
+                </button>
+                <button class="delete" @click="deletarConta(conta.id)">
+                  Excluir
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div v-if="contasReceberFiltradas.length" class="pagination">
+        <div class="pagination-meta">
+          <span class="pagination-info">
+            {{ contasReceberFiltradas.length }} conta(s) • Pagina {{ paginaReceber }} de {{ totalPaginasReceber }}
+          </span>
+        </div>
+        <div class="pagination-actions">
+          <button :disabled="paginaReceber === 1" @click="paginaReceber--">Anterior</button>
+          <button :disabled="paginaReceber === totalPaginasReceber" @click="paginaReceber++">Proxima</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- CONTAS A PAGAR -->
+    <div v-if="abaAtiva === 'pagar'" class="aba-content">
+
+      <!-- TABELA CONTAS A PAGAR -->
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Descricao</th>
+              <th>Valor</th>
+              <th>Forma</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr v-for="conta in contasPagarPaginadas" :key="conta.id">
+              <td data-label="Data">{{ formatarData(conta.data_vencimento) }}</td>
+              <td data-label="Descricao">{{ conta.descricao }}</td>
+              <td data-label="Valor" :class="conta.status === 'pago' ? 'positivo' : 'negativo'">
+                R$ {{ formatarPreco(conta.valor) }}
+              </td>
+              <td data-label="Forma">{{ conta.forma_pagamento }}</td>
+              <td data-label="Status">
+                <span :class="['status-badge', conta.status]">
+                  {{ conta.status === 'pago' ? 'Pago' : 'Pendente' }}
+                </span>
+              </td>
+              <td data-label="Ações" class="actions">
+                <button
+                  v-if="conta.status === 'pendente'"
+                  class="confirm"
+                  @click="marcarPago(conta.id)"
+                >
+                  Pagar
+                </button>
+                <button class="delete" @click="deletarConta(conta.id)">
+                  Excluir
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div v-if="contasPagarFiltradas.length" class="pagination">
+        <div class="pagination-meta">
+          <span class="pagination-info">
+            {{ contasPagarFiltradas.length }} conta(s) • Pagina {{ paginaPagar }} de {{ totalPaginasPagar }}
+          </span>
+        </div>
+        <div class="pagination-actions">
+          <button :disabled="paginaPagar === 1" @click="paginaPagar--">Anterior</button>
+          <button :disabled="paginaPagar === totalPaginasPagar" @click="paginaPagar++">Proxima</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- MODAL MOVIMENTACAO -->
     <ModalMovimentacaoFinanceira
       v-if="modalAberto"
       :movimentacao="movimentacao"
@@ -131,7 +220,10 @@
 </template>
 
 <script>
+import { supabase } from '../services/supabase'
 import ModalMovimentacaoFinanceira from '../components/ModalMovimentacaoFinanceira.vue'
+
+const ITENS_POR_PAGINA = 10
 
 export default {
   components: {
@@ -140,102 +232,118 @@ export default {
 
   data() {
     return {
-      movimentacoes: [
-        { id: 1, tipo: 'entrada', descricao: 'Venda #101', valor: 150.00, forma_pagamento: 'Pix', data: '2026-04-10' },
-        { id: 2, tipo: 'entrada', descricao: 'Venda #102', valor: 89.90, forma_pagamento: 'Dinheiro', data: '2026-04-10' },
-        { id: 3, tipo: 'saida', descricao: 'Reposicao estoque - Fornecedor XYZ', valor: 320.00, forma_pagamento: 'Transferencia', data: '2026-04-09' },
-        { id: 4, tipo: 'entrada', descricao: 'Venda #103', valor: 259.90, forma_pagamento: 'Cartao', data: '2026-04-09' },
-        { id: 5, tipo: 'saida', descricao: 'Frete entrega', valor: 45.00, forma_pagamento: 'Dinheiro', data: '2026-04-08' },
-        { id: 6, tipo: 'entrada', descricao: 'Venda #104', valor: 75.00, forma_pagamento: 'Pix', data: '2026-04-08' },
-        { id: 7, tipo: 'saida', descricao: 'Material de embalacao', valor: 120.00, forma_pagamento: 'Transferencia', data: '2026-04-07' },
-        { id: 8, tipo: 'entrada', descricao: 'Venda #105', valor: 189.90, forma_pagamento: 'Cartao', data: '2026-04-07' },
-        { id: 9, tipo: 'saida', descricao: 'Conta de luz', valor: 280.00, forma_pagamento: 'Transferencia', data: '2026-04-06' },
-        { id: 10, tipo: 'entrada', descricao: 'Venda #106', valor: 99.90, forma_pagamento: 'Dinheiro', data: '2026-04-06' },
-        { id: 11, tipo: 'saida', descricao: 'Tarifas banco', valor: 29.90, forma_pagamento: 'Debito automatico', data: '2026-04-05' },
-        { id: 12, tipo: 'entrada', descricao: 'Venda #107', valor: 349.90, forma_pagamento: 'Pix', data: '2026-04-05' }
-      ],
+      contas: [],
+
+      abaAtiva: 'resumo',
+      paginaReceber: 1,
+      paginaPagar: 1,
 
       busca: '',
       filtroTipo: '',
-      paginaAtual: 1,
-      itensPorPagina: 10,
       modalAberto: false,
       editando: false,
       movimentacaoId: null,
 
       movimentacao: {
-        tipo: 'entrada',
+        tipo: 'receber',
         descricao: '',
         valor: 0,
         forma_pagamento: '',
-        data: ''
+        data_venda: '',
+        data_vencimento: '',
+        parcelas: 1,
+        status: 'pendente'
       }
     }
+  },
+
+  async mounted() {
+    await this.buscarContas()
   },
 
   computed: {
-    totalEntradas() {
-      return this.movimentacoes
-        .filter(m => m.tipo === 'entrada')
-        .reduce((acc, m) => acc + m.valor, 0)
+    contasReceber() {
+      return this.contas.filter(c => c.tipo === 'receber')
     },
 
-    totalSaidas() {
-      return this.movimentacoes
-        .filter(m => m.tipo === 'saida')
-        .reduce((acc, m) => acc + m.valor, 0)
+    contasPagar() {
+      return this.contas.filter(c => c.tipo === 'pagar')
     },
 
-    saldoGeral() {
-      return this.totalEntradas - this.totalSaidas
+    contasReceberPendentes() {
+      return this.contasReceber.filter(c => c.status === 'pendente').length
     },
 
-    totalPaginas() {
-      return Math.max(1, Math.ceil(this.movimentacoesFiltradas.length / this.itensPorPagina))
+    contasPagarPendentes() {
+      return this.contasPagar.filter(c => c.status === 'pendente').length
     },
 
-    movimentacoesFiltradas() {
-      let lista = [...this.movimentacoes]
+    contasReceberFiltradas() {
+      return this.contasReceber.sort((a, b) => new Date(b.data_venda) - new Date(a.data_venda))
+    },
 
-      if (this.busca) {
-        const termo = this.busca.toLowerCase()
-        lista = lista.filter(m =>
-          m.descricao.toLowerCase().includes(termo)
-        )
+    contasPagarFiltradas() {
+      return this.contasPagar.sort((a, b) => new Date(b.data_vencimento) - new Date(a.data_vencimento))
+    },
+
+    totalPaginasReceber() {
+      return Math.max(1, Math.ceil(this.contasReceberFiltradas.length / ITENS_POR_PAGINA))
+    },
+
+    totalPaginasPagar() {
+      return Math.max(1, Math.ceil(this.contasPagarFiltradas.length / ITENS_POR_PAGINA))
+    },
+
+    contasReceberPaginadas() {
+      const inicio = (this.paginaReceber - 1) * ITENS_POR_PAGINA
+      return this.contasReceberFiltradas.slice(inicio, inicio + ITENS_POR_PAGINA)
+    },
+
+    contasPagarPaginadas() {
+      const inicio = (this.paginaPagar - 1) * ITENS_POR_PAGINA
+      return this.contasPagarFiltradas.slice(inicio, inicio + ITENS_POR_PAGINA)
+    },
+
+    fluxo() {
+      const entradas = this.contas
+        .filter(c => c.tipo === 'receber' && c.status === 'recebido')
+        .reduce((acc, c) => acc + c.valor, 0)
+
+      const saidas = this.contas
+        .filter(c => c.tipo === 'pagar' && c.status === 'pago')
+        .reduce((acc, c) => acc + c.valor, 0)
+
+      const pendentesReceber = this.contas
+        .filter(c => c.tipo === 'receber' && c.status === 'pendente')
+        .reduce((acc, c) => acc + c.valor, 0)
+
+      const pendentesPagar = this.contas
+        .filter(c => c.tipo === 'pagar' && c.status === 'pendente')
+        .reduce((acc, c) => acc + c.valor, 0)
+
+      return {
+        entradas,
+        saidas,
+        saldoAtual: entradas - saidas,
+        pendentesReceber,
+        pendentesPagar,
+        saldoProjetado: entradas - saidas + pendentesReceber - pendentesPagar
       }
-
-      if (this.filtroTipo) {
-        lista = lista.filter(m => m.tipo === this.filtroTipo)
-      }
-
-      return lista.sort((a, b) => new Date(b.data) - new Date(a.data))
-    },
-
-    movimentacoesPaginadas() {
-      const inicio = (this.paginaAtual - 1) * this.itensPorPagina
-      return this.movimentacoesFiltradas.slice(inicio, inicio + this.itensPorPagina)
-    }
-  },
-
-  watch: {
-    busca() {
-      this.paginaAtual = 1
-    },
-
-    filtroTipo() {
-      this.paginaAtual = 1
-    },
-
-    itensPorPagina() {
-      this.paginaAtual = 1
-    },
-
-    movimentacoes() {
-      this.ajustarPagina()
     }
   },
 
   methods: {
+    async buscarContas() {
+      const { data, error } = await supabase
+        .from('contas_financeiro')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (!error) {
+        this.contas = data || []
+      }
+    },
+
     abrirNovaMovimentacao() {
       this.resetForm()
       this.modalAberto = true
@@ -253,35 +361,56 @@ export default {
       this.resetForm()
     },
 
-    salvarMovimentacao(mov) {
+    async salvarMovimentacao(mov) {
       if (this.editando) {
-        const index = this.movimentacoes.findIndex(m => m.id === this.movimentacaoId)
-        if (index !== -1) {
-          this.movimentacoes[index] = { ...mov, id: this.movimentacaoId }
-        }
+        await supabase
+          .from('contas_financeiro')
+          .update(mov)
+          .eq('id', this.movimentacaoId)
       } else {
-        const novoId = Math.max(...this.movimentacoes.map(m => m.id), 0) + 1
-        this.movimentacoes.push({ ...mov, id: novoId })
+        await supabase
+          .from('contas_financeiro')
+          .insert([mov])
       }
 
       this.fecharModal()
+      await this.buscarContas()
     },
 
-    deletarMovimentacao(id) {
-      if (!confirm('Excluir movimentacao?')) return
+    async deletarConta(id) {
+      if (!confirm('Excluir conta?')) return
+      await supabase.from('contas_financeiro').delete().eq('id', id)
+      await this.buscarContas()
+    },
 
-      this.movimentacoes = this.movimentacoes.filter(m => m.id !== id)
+    async marcarRecebido(id) {
+      await supabase
+        .from('contas_financeiro')
+        .update({ status: 'recebido' })
+        .eq('id', id)
+      await this.buscarContas()
+    },
+
+    async marcarPago(id) {
+      await supabase
+        .from('contas_financeiro')
+        .update({ status: 'pago' })
+        .eq('id', id)
+      await this.buscarContas()
     },
 
     resetForm() {
       this.editando = false
       this.movimentacaoId = null
       this.movimentacao = {
-        tipo: 'entrada',
+        tipo: 'pagar',
         descricao: '',
         valor: 0,
         forma_pagamento: '',
-        data: ''
+        data_venda: '',
+        data_vencimento: '',
+        parcelas: 1,
+        status: 'pendente'
       }
     },
 
@@ -292,17 +421,8 @@ export default {
 
     formatarData(data) {
       if (!data) return '-'
-      return data.split('-').reverse().join('/')
-    },
-
-    irParaPagina(pagina) {
-      this.paginaAtual = pagina
-    },
-
-    ajustarPagina() {
-      if (this.paginaAtual > this.totalPaginas) {
-        this.paginaAtual = this.totalPaginas
-      }
+      const d = data.split ? data.split('T')[0] : data
+      return d.split('-').reverse().join('/')
     }
   }
 }
@@ -360,10 +480,74 @@ export default {
   letter-spacing: -0.02em;
 }
 
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+
+.tab {
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  border-radius: 10px 10px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  position: relative;
+}
+
+.tab:hover {
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.tab.active {
+  background: var(--primary-soft);
+  color: var(--primary-hover);
+}
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+.tab-badge.warning {
+  background: var(--warning);
+}
+
+.aba-content {
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .resumo-cards {
   display: flex;
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
+}
+
+.resumo-cards.secondary {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
 }
 
 .card {
@@ -402,15 +586,8 @@ export default {
   color: var(--danger);
 }
 
-.filtros {
-  display: grid;
-  grid-template-columns: 1fr 200px;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.busca {
-  width: 100%;
+.card .valor.pendente {
+  color: var(--warning);
 }
 
 .table-card {
@@ -450,6 +627,7 @@ button {
   border-radius: 12px;
   cursor: pointer;
   font-weight: 600;
+  font-size: 13px;
 }
 
 .primary {
@@ -458,20 +636,20 @@ button {
   box-shadow: 0 10px 24px rgba(249, 115, 22, 0.22);
 }
 
-.edit {
-  background: #eff6ff;
-  color: var(--info);
-  border-color: #bfdbfe;
+.confirm {
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: #bbf7d0;
+}
+
+.confirm:hover {
+  background: #dcfce7;
 }
 
 .delete {
   background: var(--danger-soft);
   color: var(--danger);
   border-color: #fecaca;
-}
-
-.edit:hover {
-  background: #dbeafe;
 }
 
 .delete:hover {
@@ -495,24 +673,22 @@ tbody tr:last-child td {
   border-bottom: none;
 }
 
-.tipo-entrada {
+.status-badge {
   display: inline-flex;
   padding: 5px 10px;
   border-radius: 999px;
-  background: var(--success-soft);
-  color: var(--success);
   font-size: 12px;
   font-weight: 600;
 }
 
-.tipo-saida {
-  display: inline-flex;
-  padding: 5px 10px;
-  border-radius: 999px;
-  background: var(--danger-soft);
-  color: var(--danger);
-  font-size: 12px;
-  font-weight: 600;
+.status-badge.pendente {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.status-badge.recebido, .status-badge.pago {
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .positivo {
@@ -536,21 +712,6 @@ tbody tr:last-child td {
   display: flex;
   align-items: center;
   gap: 14px;
-  flex-wrap: wrap;
-}
-
-.pagination-select {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.pagination-select select {
-  width: auto;
-  min-width: 86px;
 }
 
 .pagination-info {
@@ -593,16 +754,11 @@ tbody tr:last-child td {
     flex-direction: column;
   }
 
-  .filtros {
-    grid-template-columns: 1fr;
+  .tabs {
+    overflow-x: auto;
   }
 
-  table,
-  thead,
-  tbody,
-  th,
-  td,
-  tr {
+  table, thead, tbody, th, td, tr {
     display: block;
   }
 
@@ -616,7 +772,6 @@ tbody tr:last-child td {
     border-radius: 18px;
     padding: 12px;
     border: 1px solid var(--border);
-    box-shadow: none;
   }
 
   td {
@@ -625,7 +780,6 @@ tbody tr:last-child td {
     gap: 16px;
     padding: 10px 4px;
     border: none;
-    font-size: 13px;
   }
 
   td::before {
@@ -641,15 +795,6 @@ tbody tr:last-child td {
   .pagination {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .pagination-meta {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .pagination-actions {
-    width: 100%;
   }
 
   .pagination-actions button {

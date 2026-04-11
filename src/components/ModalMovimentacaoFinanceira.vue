@@ -3,28 +3,28 @@
     <div class="modal">
 
       <div class="modal-header">
-        <h2>{{ editando ? 'Editar Movimentacao' : 'Nova Movimentacao' }}</h2>
+        <h2>{{ editando ? 'Editar' : 'Nova' }} {{ tipoLabel }}</h2>
         <button class="close" @click="$emit('fechar')">×</button>
       </div>
 
       <form @submit.prevent="submit">
 
-        <div class="field">
+        <div v-if="!editando" class="field">
           <label>Tipo</label>
           <div class="toggle-tipo">
             <button
               type="button"
-              :class="['tipo-btn', localMovimentacao.tipo === 'entrada' ? 'ativo entrada' : '']"
-              @click="localMovimentacao.tipo = 'entrada'"
+              :class="['tipo-btn', localMovimentacao.tipo === 'receber' ? 'ativo entrada' : '']"
+              @click="localMovimentacao.tipo = 'receber'"
             >
-              Entrada
+              Receber
             </button>
             <button
               type="button"
-              :class="['tipo-btn', localMovimentacao.tipo === 'saida' ? 'ativo saida' : '']"
-              @click="localMovimentacao.tipo = 'saida'"
+              :class="['tipo-btn', localMovimentacao.tipo === 'pagar' ? 'ativo saida' : '']"
+              @click="localMovimentacao.tipo = 'pagar'"
             >
-              Saída
+              Pagar
             </button>
           </div>
         </div>
@@ -41,20 +41,38 @@
           </div>
 
           <div class="field">
-            <label>Data</label>
-            <input v-model="localMovimentacao.data" type="date" required />
+            <label>{{ localMovimentacao.tipo === 'receber' ? 'Data Recebimento' : 'Vencimento' }}</label>
+            <input v-model="localMovimentacao.data_vencimento" type="date" required />
           </div>
         </div>
 
-        <div class="field">
+        <div v-if="localMovimentacao.tipo === 'receber'" class="row">
+          <div class="field">
+            <label>Forma de Pagamento</label>
+            <select v-model="localMovimentacao.forma_pagamento" required>
+              <option disabled value="">Selecione</option>
+              <option>Dinheiro</option>
+              <option>Pix</option>
+              <option>Transferencia</option>
+              <option>Cartao debito</option>
+              <option>Cartao credito</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Parcelas</label>
+            <select v-model.number="localMovimentacao.parcelas">
+              <option v-for="n in 12" :key="n" :value="n">{{ n }}x</option>
+            </select>
+          </div>
+        </div>
+
+        <div v-else class="field">
           <label>Forma de Pagamento</label>
           <select v-model="localMovimentacao.forma_pagamento" required>
             <option disabled value="">Selecione</option>
             <option>Dinheiro</option>
-            <option>Pix</option>
             <option>Transferencia</option>
-            <option>Cartao debito</option>
-            <option>Cartao credito</option>
             <option>Debito automatico</option>
           </select>
         </div>
@@ -79,12 +97,32 @@ export default {
   props: ['movimentacao', 'editando'],
 
   data() {
+    const mov = this.movimentacao
     return {
-      localMovimentacao: { ...this.movimentacao }
+      localMovimentacao: {
+        tipo: mov?.tipo || 'pagar',
+        descricao: mov?.descricao || '',
+        valor: mov?.valor || 0,
+        forma_pagamento: mov?.forma_pagamento || '',
+        data_venda: mov?.data_venda || this.getHoje(),
+        data_vencimento: mov?.data_vencimento || this.getHoje(),
+        parcelas: mov?.parcelas || 1,
+        status: mov?.status || 'pendente'
+      }
+    }
+  },
+
+computed: {
+    tipoLabel() {
+      return this.localMovimentacao.tipo === 'receber' ? 'Conta a Receber' : 'Conta a Pagar'
     }
   },
 
   methods: {
+    getHoje() {
+      return new Date().toISOString().split('T')[0]
+    },
+
     submit() {
       const mov = {
         ...this.localMovimentacao,
@@ -239,11 +277,6 @@ button {
 
   .actions button {
     width: 100%;
-  }
-
-  input,
-  select {
-    font-size: 16px;
   }
 }
 </style>

@@ -87,11 +87,19 @@
 
         <div class="linha">
           <span>Pagamento</span>
-          <select v-model="venda.forma_pagamento">
+          <select v-model="venda.forma_pagamento" @change="onFormaPagamentoChange">
             <option value="">Selecione</option>
             <option>Pix</option>
             <option>Dinheiro</option>
             <option>Cartão</option>
+            <option>Cartão de Crédito</option>
+          </select>
+        </div>
+
+        <div v-if="mostrarParcelas" class="linha">
+          <span>Parcelas</span>
+          <select v-model="venda.parcelas">
+            <option v-for="n in 12" :key="n" :value="n">{{ n }}x</option>
           </select>
         </div>
 
@@ -126,8 +134,15 @@ export default {
         desconto: 0,
         total_bruto: 0,
         total_final: 0,
-        forma_pagamento: ''
+        forma_pagamento: '',
+        parcelas: 1
       }
+    }
+  },
+
+  computed: {
+    mostrarParcelas() {
+      return this.venda.forma_pagamento === 'Cartão de Crédito'
     }
   },
 
@@ -138,6 +153,12 @@ export default {
 
     formatar(v) {
       return Number(v || 0).toFixed(2).replace('.', ',')
+    },
+
+    onFormaPagamentoChange() {
+      if (!this.mostrarParcelas) {
+        this.venda.parcelas = 1
+      }
     },
 
     adicionarProduto() {

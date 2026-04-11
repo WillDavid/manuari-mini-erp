@@ -128,10 +128,11 @@
 
 <script>
 import { supabase } from '../services/supabase'
+import { criarContaReceber, FORMA_PAGAMENTO_RECEBIDO } from '../services/financeiro'
 import ModalVenda from '../components/ModalVenda.vue'
 
 export default {
-  components: { ModalVenda},
+  components: { ModalVenda },
 
   data() {
     return {
@@ -249,7 +250,8 @@ export default {
       total_bruto: venda.total_bruto,
       desconto: venda.desconto,
       total_final: venda.total_final,
-      forma_pagamento: venda.forma_pagamento
+      forma_pagamento: venda.forma_pagamento,
+      parcelas: venda.parcelas || 1
     }
 
     let vendaSalva
@@ -366,9 +368,33 @@ export default {
     this.fecharModal()
     this.buscarVendas()
 
+    await this.gerarContaFinanceiro(vendaSalva, venda)
+
   } catch (error) {
     console.error(error)
     alert('Erro ao salvar venda')
+  }
+},
+
+async gerarContaFinanceiro(venda, dadosVenda) {
+  try {
+    const recebido = FORMA_PAGAMENTO_RECEBIDO.includes(dadosVenda.forma_pagamento)
+
+    const payloadConta = {
+      venda_id: venda.id,
+      tipo: 'receber',
+      descricao: dadosVenda.cliente ? `Venda #${venda.id} - ${dadosVenda.cliente}` : `Venda #${venda.id}`,
+      valor: dadosVenda.total_final,
+      forma_pagamento: dadosVenda.forma_pagamento,
+      parcelas: dadosVenda.parcelas || 1,
+      data_venda: dadosVenda.data_venda,
+      data_vencimento: dadosVenda.data_venda,
+      status: recebido ? 'recebido' : 'pendente'
+    }
+
+    await supabase.from('contas_financeiro').insert([payloadConta])
+  } catch (error) {
+    console.error('Erro ao gerar conta financeira:', error)
   }
 },
 
