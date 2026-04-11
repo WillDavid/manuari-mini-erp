@@ -145,7 +145,7 @@ export default {
 
 .navbar-shell {
   width: 100%;
-  max-width: 1600px;
+  max-width: 1520px;
   margin: 0 auto;
   display: flex;
   align-items: center;
