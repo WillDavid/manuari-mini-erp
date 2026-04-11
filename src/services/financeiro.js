@@ -7,6 +7,72 @@ export const STATUS_RECEBIDO = 'recebido'
 export const STATUS_PENDENTE = 'pendente'
 export const STATUS_PAGO = 'pago'
 
+export function calcularStatusAutomatico(formaPagamento, dataVencimento) {
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
+  
+  if (FORMA_PAGAMENTO_RECEBIDO.includes(formaPagamento)) {
+    return STATUS_RECEBIDO
+  }
+  
+  if (!dataVencimento) {
+    return STATUS_PENDENTE
+  }
+  
+  const vencimento = new Date(dataVencimento)
+  vencimento.setHours(0, 0, 0, 0)
+  
+  if (vencimento <= hoje) {
+    return STATUS_RECEBIDO
+  }
+  
+  return STATUS_PENDENTE
+}
+
+export function calcularFluxoCaixaAuto(contasReceber, contasPagar = []) {
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
+  
+  let entradas = 0
+  let pendentesReceber = 0
+  
+  for (const conta of contasReceber) {
+    const statusAuto = calcularStatusAutomatico(conta.forma_pagamento, conta.data_vencimento)
+    
+    if (statusAuto === STATUS_RECEBIDO) {
+      entradas += conta.valor
+    } else {
+      pendentesReceber += conta.valor
+    }
+  }
+  
+  const saidas = contasPagar
+    .filter(c => c.status === STATUS_PAGO)
+    .reduce((acc, c) => acc + c.valor, 0)
+  
+  const pendentesPagar = contasPagar
+    .filter(c => c.status === STATUS_PENDENTE)
+    .reduce((acc, c) => acc + c.valor, 0)
+  
+  return {
+    entradas,
+    saidas,
+    saldoAtual: entradas - saidas,
+    pendentesReceber,
+    pendentesPagar,
+    saldoProjetado: entradas - saidas + pendentesReceber - pendentesPagar,
+    totalReceber: entradas + pendentesReceber,
+    totalPagar: saidas + pendentesPagar
+  }
+}
+
+export function adicionarStatusAutomatico(conta) {
+  return {
+    ...conta,
+    status_exibicao: calcularStatusAutomatico(conta.forma_pagamento, conta.data_vencimento)
+  }
+}
+
 export function calcularParcelas(valorTotal, numeroParcelas) {
   const valorParcela = valorTotal / numeroParcelas
   return {

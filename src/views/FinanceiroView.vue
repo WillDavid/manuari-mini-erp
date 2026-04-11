@@ -102,7 +102,6 @@
               <th>Parcela</th>
               <th>Valor</th>
               <th>Status</th>
-              <th></th>
             </tr>
           </thead>
 
@@ -122,18 +121,9 @@
                 {{ mov.tipo === 'entrada' ? '+' : '-' }}R$ {{ formatarPreco(mov.valor) }}
               </td>
               <td data-label="Status">
-                <span :class="['status-badge', mov.status]">
-                  {{ mov.status === 'recebido' ? 'Recebido' : mov.status === 'pago' ? 'Pago' : 'Pendente' }}
+                <span :class="['status-badge', getStatusMov(mov)]">
+                  {{ getStatusMov(mov) === 'recebido' ? 'Recebido' : getStatusMov(mov) === 'pago' ? 'Pago' : 'Pendente' }}
                 </span>
-              </td>
-              <td data-label="Ações" class="actions">
-                <button
-                  v-if="mov.status === 'pendente'"
-                  class="confirm"
-                  @click="marcarMovimentacao(mov)"
-                >
-                  {{ mov.tipo === 'entrada' ? 'Receber' : 'Pagar' }}
-                </button>
               </td>
             </tr>
           </tbody>
@@ -164,7 +154,6 @@
               <th>Valor</th>
               <th>Vencimento</th>
               <th>Status</th>
-              <th></th>
             </tr>
           </thead>
 
@@ -172,23 +161,14 @@
             <tr v-for="conta in contasReceberPaginadas" :key="conta.id">
               <td data-label="Venda">#{{ conta.venda_id?.slice(0, 8) }}</td>
               <td data-label="Parcela">{{ conta.numero_parcela }}/{{ conta.total_parcelas }}</td>
-              <td data-label="Valor" :class="conta.status === 'recebido' ? 'positivo' : ''">
+              <td data-label="Valor" :class="getStatusExibicao(conta) === 'recebido' ? 'positivo' : ''">
                 R$ {{ formatarPreco(conta.valor) }}
               </td>
               <td data-label="Vencimento">{{ formatarData(conta.data_vencimento) }}</td>
               <td data-label="Status">
-                <span :class="['status-badge', conta.status]">
-                  {{ conta.status === 'recebido' ? 'Recebido' : 'Pendente' }}
+                <span :class="['status-badge', getStatusExibicao(conta)]">
+                  {{ getStatusExibicao(conta) === 'recebido' ? 'Recebido' : 'Pendente' }}
                 </span>
-              </td>
-              <td data-label="Ações" class="actions">
-                <button
-                  v-if="conta.status === 'pendente'"
-                  class="confirm"
-                  @click="marcarRecebido(conta.id)"
-                >
-                  Receber
-                </button>
               </td>
             </tr>
           </tbody>
@@ -284,7 +264,8 @@ import {
   atualizarStatusContaPagar,
   criarContaPagar,
   deletarContaReceber,
-  calcularFluxoCaixa,
+  calcularFluxoCaixaAuto,
+  calcularStatusAutomatico,
   listarMovimentacoes,
   STATUS_RECEBIDO,
   STATUS_PENDENTE
@@ -374,7 +355,7 @@ export default {
     },
 
     fluxo() {
-      return calcularFluxoCaixa(this.contasReceber, this.contasPagar)
+      return calcularFluxoCaixaAuto(this.contasReceber, this.contasPagar)
     }
   },
 
@@ -448,6 +429,17 @@ export default {
     formatarData(data) {
       if (!data) return '-'
       return data.split('T')[0].split('-').reverse().join('/')
+    },
+
+    getStatusExibicao(conta) {
+      return calcularStatusAutomatico(conta.forma_pagamento, conta.data_vencimento)
+    },
+
+    getStatusMov(mov) {
+      if (mov.tipo === 'saida') {
+        return mov.status
+      }
+      return calcularStatusAutomatico(mov.forma_pagamento, mov.data)
     }
   }
 }
