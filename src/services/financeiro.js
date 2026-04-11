@@ -15,10 +15,34 @@ export function calcularParcelas(valorTotal, numeroParcelas) {
   }
 }
 
-export function calcularDataVencimento(dataBase, mesesAdicionais) {
+export function calcularDataVencimento(dataBase, mesesAdicionais = 0, aplicarRegraCredito = false) {
   const data = new Date(dataBase)
-  data.setMonth(data.getMonth() + mesesAdicionais)
+  
+  if (aplicarRegraCredito) {
+    data.setMonth(data.getMonth() + 1 + mesesAdicionais)
+  } else {
+    data.setMonth(data.getMonth() + mesesAdicionais)
+  }
+  
+  const diaOriginal = new Date(dataBase).getDate()
+  if (data.getDate() !== diaOriginal) {
+    data.setDate(0)
+  }
+  
   return data.toISOString()
+}
+
+export function formatarDataVencimento(dataBase, parcelas, ehCredito) {
+  if (!ehCredito || parcelas <= 1) {
+    return [calcularDataVencimento(dataBase, 0, false)]
+  }
+  
+  const datas = []
+  for (let i = 0; i < parcelas; i++) {
+    const dataVencimento = calcularDataVencimento(dataBase, i, true)
+    datas.push(dataVencimento)
+  }
+  return datas
 }
 
 export async function criarContasReceberDaVenda(venda) {
@@ -35,16 +59,16 @@ export async function criarContasReceberDaVenda(venda) {
 
   if (forma_pagamento === 'credito') {
     const numeroParcelas = parcelas || 1
-    const valorParcela = valor_parcela || (valorTotal / numeroParcelas)
+    const valorParcela = valor_parcela || calcularParcelas(valorTotal, numeroParcelas).valorParcela
+
+    const datasVencimento = formatarDataVencimento(data_venda, numeroParcelas, true)
 
     const contas = []
     for (let i = 0; i < numeroParcelas; i++) {
-      const dataVencimento = calcularDataVencimento(data_venda, i)
-
       contas.push({
         venda_id: vendaId,
         valor: valorParcela,
-        data_vencimento: dataVencimento,
+        data_vencimento: datasVencimento[i],
         status: STATUS_PENDENTE,
         numero_parcela: i + 1,
         total_parcelas: numeroParcelas,
@@ -141,6 +165,80 @@ export async function buscarContasPagar() {
   }
 
   return data || []
+}
+
+export async function listarMovimentacoes() {
+  const { data: contasR, error: erroR } = await supabase
+    .from('contas_receber')
+    .select(`
+      id,
+      venda_id,
+      valor,
+      data_vencimento,
+      status,
+      forma_pagamento,
+      numero_parcela,
+      total_parcelas,
+      vendas_erp!inner(cliente)
+    `)
+    .order('data_vencimento', { ascending: false })
+
+  const { data: contasP, error: erroP } = await supabase
+    .from('contas_pagar')
+    .select('*')
+    .order('data_vencimento', { ascending: false })
+
+  const formatarDescricao = (conta) => {
+    if (conta.venda_id) {
+      const cliente = conta.vendas_erp?.cliente || 'Cliente'
+      return `Venda #${conta.venda_id.slice(0, 8)} - ${cliente}`
+    }
+    return conta.descricao
+  }
+
+  const movimentacoes = []
+
+  if (contasR && !erroR) {
+    for (const c of contasR) {
+      movimentacoes.push({
+        id: c.id,
+        tipo: 'entrada',
+        descricao: formatarDescricao(c),
+        valor: c.valor,
+        data: c.data_vencimento,
+        status: c.status,
+        forma_pagamento: c.forma_pagamento,
+        numero_parcela: c.numero_parcela,
+        total_parcelas: c.total_parcelas,
+        origem_id: c.venda_id,
+        tabela_origem: 'contas_receber'
+      })
+    }
+  }
+
+  if (contasP && !erroP) {
+    for (const c of contasP) {
+      movimentacoes.push({
+        id: c.id,
+        tipo: 'saida',
+        descricao: c.descricao,
+        valor: c.valor,
+        data: c.data_vencimento,
+        status: c.status,
+        forma_pagamento: c.forma_pagamento,
+        numero_parcela: null,
+        total_parcelas: null,
+        origem_id: c.id,
+        tabela_origem: 'contas_pagar'
+      })
+    }
+  }
+
+  return movimentacoes.sort((a, b) => new Date(b.data) - new Date(a.data))
+}
+
+export function calcularDataParcelas(dataVenda, numeroParcelas) {
+  return formatarDataVencimento(dataVenda, numeroParcelas, true)
 }
 
 export async function atualizarStatusContaReceber(id, novoStatus) {

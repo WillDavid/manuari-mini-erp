@@ -24,6 +24,12 @@
         Resumo
       </button>
       <button
+        :class="['tab', abaAtiva === 'movimentacoes' ? 'active' : '']"
+        @click="abaAtiva = 'movimentacoes'"
+      >
+        Movimentacoes
+      </button>
+      <button
         :class="['tab', abaAtiva === 'receber' ? 'active' : '']"
         @click="abaAtiva = 'receber'"
       >
@@ -78,6 +84,69 @@
           <span class="valor" :class="fluxo.saldoProjetado >= 0 ? 'positivo' : 'negativo'">
             R$ {{ formatarPreco(fluxo.saldoProjetado) }}
           </span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- MOVIMENTAÇÕES FINANCEIRAS -->
+    <div v-if="abaAtiva === 'movimentacoes'" class="aba-content">
+
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Tipo</th>
+              <th>Descricao</th>
+              <th>Parcela</th>
+              <th>Valor</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr v-for="mov in movimentacoesPaginadas" :key="mov.id">
+              <td data-label="Data">{{ formatarData(mov.data) }}</td>
+              <td data-label="Tipo">
+                <span :class="['tipo-badge', mov.tipo]">
+                  {{ mov.tipo === 'entrada' ? 'Entrada' : 'Saída' }}
+                </span>
+              </td>
+              <td data-label="Descricao">{{ mov.descricao }}</td>
+              <td data-label="Parcela">
+                {{ mov.numero_parcela ? `${mov.numero_parcela}/${mov.total_parcelas}` : '-' }}
+              </td>
+              <td data-label="Valor" :class="mov.tipo === 'entrada' ? 'positivo' : 'negativo'">
+                {{ mov.tipo === 'entrada' ? '+' : '-' }}R$ {{ formatarPreco(mov.valor) }}
+              </td>
+              <td data-label="Status">
+                <span :class="['status-badge', mov.status]">
+                  {{ mov.status === 'recebido' ? 'Recebido' : mov.status === 'pago' ? 'Pago' : 'Pendente' }}
+                </span>
+              </td>
+              <td data-label="Ações" class="actions">
+                <button
+                  v-if="mov.status === 'pendente'"
+                  class="confirm"
+                  @click="marcarMovimentacao(mov)"
+                >
+                  {{ mov.tipo === 'entrada' ? 'Receber' : 'Pagar' }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div v-if="movimentacoes.length" class="pagination">
+        <div class="pagination-info">
+          {{ movimentacoes.length }} movimentacao(s) • Pagina {{ paginaMov }} de {{ totalPaginasMov }}
+        </div>
+        <div class="pagination-actions">
+          <button :disabled="paginaMov === 1" @click="paginaMov--">Anterior</button>
+          <button :disabled="paginaMov === totalPaginasMov" @click="paginaMov++">Proxima</button>
         </div>
       </div>
 
@@ -216,6 +285,7 @@ import {
   criarContaPagar,
   deletarContaReceber,
   calcularFluxoCaixa,
+  listarMovimentacoes,
   STATUS_RECEBIDO,
   STATUS_PENDENTE
 } from '../services/financeiro'
@@ -230,10 +300,12 @@ export default {
     return {
       contasReceber: [],
       contasPagar: [],
+      movimentacoes: [],
 
       abaAtiva: 'resumo',
       paginaReceber: 1,
       paginaPagar: 1,
+      paginaMov: 1,
 
       modalAberto: false,
       editando: false,
@@ -250,6 +322,7 @@ export default {
 
   async mounted() {
     await this.buscarContas()
+    await this.buscarMovimentacoes()
   },
 
   computed: {
@@ -267,6 +340,19 @@ export default {
 
     contasPagarFiltradas() {
       return [...this.contasPagar].sort((a, b) => new Date(a.data_vencimento) - new Date(b.data_vencimento))
+    },
+
+    movimentacoesFiltradas() {
+      return [...this.movimentacoes].sort((a, b) => new Date(b.data) - new Date(a.data))
+    },
+
+    totalPaginasMov() {
+      return Math.max(1, Math.ceil(this.movimentacoesFiltradas.length / ITENS_POR_PAGINA))
+    },
+
+    movimentacoesPaginadas() {
+      const inicio = (this.paginaMov - 1) * ITENS_POR_PAGINA
+      return this.movimentacoesFiltradas.slice(inicio, inicio + ITENS_POR_PAGINA)
     },
 
     totalPaginasReceber() {
@@ -296,6 +382,10 @@ export default {
     async buscarContas() {
       this.contasReceber = await buscarContasReceber()
       this.contasPagar = await buscarContasPagar()
+    },
+
+    async buscarMovimentacoes() {
+      this.movimentacoes = await listarMovimentacoes()
     },
 
     abrirNovaConta() {
@@ -328,6 +418,20 @@ export default {
     async marcarPago(id) {
       await atualizarStatusContaPagar(id, 'pago')
       await this.buscarContas()
+      await this.buscarMovimentacoes()
+    },
+
+    async marcarMovimentacao(mov) {
+      const novoStatus = mov.tipo === 'entrada' ? STATUS_RECEBIDO : 'pago'
+      
+      if (mov.tabela_origem === 'contas_receber') {
+        await atualizarStatusContaReceber(mov.id, novoStatus)
+      } else if (mov.tabela_origem === 'contas_pagar') {
+        await atualizarStatusContaPagar(mov.id, novoStatus)
+      }
+      
+      await this.buscarContas()
+      await this.buscarMovimentacoes()
     },
 
     async deletarContaPagar(id) {
@@ -610,6 +714,24 @@ tbody tr:last-child td {
 .status-badge.recebido, .status-badge.pago {
   background: var(--success-soft);
   color: var(--success);
+}
+
+.tipo-badge {
+  display: inline-flex;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tipo-badge.entrada {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.tipo-badge.saida {
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .positivo {
