@@ -87,118 +87,129 @@ export default {
 }
 </script>
 
-<style scoped>.modal-overlay {
+<style scoped>
+.modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.4);
-
+  z-index: 2000;
+  background: rgba(15, 23, 42, 0.52);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
-
-  padding: 16px; /* respiro nas bordas */
+  padding: 16px;
 }
 
-/* MODAL */
 .modal {
-  background: white;
+  background: var(--surface);
   width: 100%;
   max-width: 480px;
-
-  border-radius: 12px;
-  padding: 20px;
-
+  border-radius: var(--radius-md);
+  padding: 24px;
   max-height: 90vh;
   overflow-y: auto;
-
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: var(--shadow-md);
 }
 
-/* HEADER */
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .modal-header h2 {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .close {
-  background: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--text-muted);
   font-size: 20px;
   cursor: pointer;
 }
 
-/* FORM */
 .field {
   display: flex;
   flex-direction: column;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .field label {
   font-size: 13px;
-  margin-bottom: 4px;
-  color: #555;
+  margin-bottom: 6px;
+  color: var(--text-muted);
+  font-weight: 600;
 }
 
-/* ROW (desktop) */
 .row {
   display: flex;
-  gap: 10px;
+  gap: 12px;
 }
 
-/* INPUT */
 input {
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 14px;
+  background: var(--surface);
 }
 
-/* CHECKBOX */
 .checkbox {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 6px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 14px;
 }
 
-/* ACTIONS */
+.checkbox input {
+  width: 18px;
+  min-height: auto;
+}
+
+.checkbox label {
+  color: var(--text);
+  font-weight: 600;
+}
+
 .actions {
   display: flex;
   gap: 10px;
-  margin-top: 16px;
+  margin-top: 20px;
 }
 
 button {
-  border: none;
+  border: 1px solid transparent;
   padding: 10px 14px;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
   font-size: 14px;
+  font-weight: 600;
 }
 
 .primary {
-  background: #ff6a00;
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
   color: white;
+  box-shadow: 0 10px 24px rgba(249, 115, 22, 0.22);
 }
 
 .secondary {
-  background: #ccc;
+  background: var(--surface-soft);
+  border-color: var(--border);
+  color: var(--text);
 }
 
-/* 📱 RESPONSIVO */
 @media (max-width: 600px) {
-
   .modal {
     padding: 16px;
-    border-radius: 10px;
+    border-radius: 14px;
   }
 
   .row {
@@ -214,7 +225,7 @@ button {
   }
 
   input {
-    font-size: 16px; /* evita zoom no iOS */
+    font-size: 16px;
   }
 }
 </style>

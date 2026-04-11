@@ -43,7 +43,7 @@
         </thead>
 
         <tbody>
-          <tr v-for="v in vendasFiltradas" :key="v.id">
+          <tr v-for="v in vendasPaginadas" :key="v.id">
             <td data-label="Data">{{ formatarData(v.data_venda) }}</td>
 
             <td data-label="Cliente">
@@ -86,6 +86,33 @@
       </table>
     </div>
 
+    <div v-if="vendasFiltradas.length" class="pagination">
+      <div class="pagination-meta">
+        <label class="pagination-select">
+          <span>Mostrar</span>
+          <select v-model.number="itensPorPagina">
+            <option :value="100">100</option>
+            <option :value="200">200</option>
+            <option :value="500">500</option>
+            <option :value="1000">1000</option>
+          </select>
+        </label>
+
+        <span class="pagination-info">
+          {{ vendasFiltradas.length }} resultado(s) • Pagina {{ paginaAtual }} de {{ totalPaginas }}
+        </span>
+      </div>
+
+      <div class="pagination-actions">
+        <button :disabled="paginaAtual === 1" @click="irParaPagina(paginaAtual - 1)">
+          Anterior
+        </button>
+        <button :disabled="paginaAtual === totalPaginas" @click="irParaPagina(paginaAtual + 1)">
+          Proxima
+        </button>
+      </div>
+    </div>
+
     <!-- MODAL -->
     <ModalVenda
       v-if="modalAberto"
@@ -110,6 +137,8 @@ export default {
     return {
       vendas: [],
       produtos: [],
+      paginaAtual: 1,
+      itensPorPagina: 10,
       modalAberto: false,
       vendaEditando: null,
 
@@ -151,6 +180,7 @@ export default {
         .select('*')
 
       this.produtos = data || []
+      window.dispatchEvent(new Event('estoque-atualizado'))
     },
 
     abrirNovaVenda() {
@@ -418,57 +448,114 @@ export default {
     formatarData(data) {
       if (!data) return '-'
       return data.split('T')[0].split('-').reverse().join('/')
+    },
+
+    irParaPagina(pagina) {
+      this.paginaAtual = pagina
+    },
+
+    ajustarPagina() {
+      if (this.paginaAtual > this.totalPaginas) {
+        this.paginaAtual = this.totalPaginas
+      }
     }
   },
 
   computed: {
   vendasFiltradas() {
-    return this.vendas.filter(v => {
+    return [...this.vendas]
+      .sort((a, b) => {
+        const dataA = new Date(a.data_venda || 0).getTime()
+        const dataB = new Date(b.data_venda || 0).getTime()
 
-      // 🔎 FILTRO TEXTO
-      const termo = this.busca.toLowerCase()
+        if (dataA !== dataB) return dataB - dataA
+        return (b.id || 0) - (a.id || 0)
+      })
+      .filter(v => {
 
-      const clienteMatch = (v.cliente || '')
-        .toLowerCase()
-        .includes(termo)
+        const termo = this.busca.toLowerCase()
 
-      const produtoMatch = v.itens_venda_erp.some(i =>
-        i.produtos_erp.nome.toLowerCase().includes(termo)
-      )
+        const clienteMatch = (v.cliente || '')
+          .toLowerCase()
+          .includes(termo)
 
-      const matchBusca = clienteMatch || produtoMatch
+        const produtoMatch = v.itens_venda_erp.some(i =>
+          i.produtos_erp.nome.toLowerCase().includes(termo)
+        )
 
-      // 📅 FILTRO DATA
-      const dataVenda = v.data_venda?.split('T')[0]
+        const matchBusca = clienteMatch || produtoMatch
 
-      const matchInicio = !this.dataInicio || dataVenda >= this.dataInicio
-      const matchFim = !this.dataFim || dataVenda <= this.dataFim
+        const dataVenda = v.data_venda?.split('T')[0]
 
-      return matchBusca && matchInicio && matchFim
-    })
+        const matchInicio = !this.dataInicio || dataVenda >= this.dataInicio
+        const matchFim = !this.dataFim || dataVenda <= this.dataFim
+
+        return matchBusca && matchInicio && matchFim
+      })
+  },
+
+  totalPaginas() {
+    return Math.max(1, Math.ceil(this.vendasFiltradas.length / this.itensPorPagina))
+  },
+
+  vendasPaginadas() {
+    const inicio = (this.paginaAtual - 1) * this.itensPorPagina
+    return this.vendasFiltradas.slice(inicio, inicio + this.itensPorPagina)
   }
-}
+  },
+
+  watch: {
+    busca() {
+      this.paginaAtual = 1
+    },
+
+    dataInicio() {
+      this.paginaAtual = 1
+    },
+
+    dataFim() {
+      this.paginaAtual = 1
+    },
+
+    itensPorPagina() {
+      this.paginaAtual = 1
+    },
+
+    vendas() {
+      this.ajustarPagina()
+    }
+  }
 }
 </script>
 
 <style scoped>
 .page {
-  padding: 24px;
+  padding: 32px 20px 40px;
+  max-width: 1520px;
+  margin: 0 auto;
 }
 
-/* HEADER */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
-/* TABELA */
+.header h3 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
 .table-card {
-  background: white;
-  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   overflow-x: auto;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 18px;
 }
 
 table {
@@ -478,43 +565,171 @@ table {
 }
 
 th {
-  background: #f1f1f1;
+  background: var(--surface-soft);
   text-align: left;
-  padding: 12px;
+  padding: 14px 16px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 td {
-  padding: 12px;
-  border-bottom: 1px solid #eee;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
 }
 
-/* BOTÕES */
 button {
-  border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
+  border: 1px solid transparent;
+  padding: 9px 14px;
+  border-radius: 12px;
   cursor: pointer;
+  font-weight: 600;
 }
 
 .primary {
-  background: #ff6a00;
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
   color: white;
+  box-shadow: 0 10px 24px rgba(249, 115, 22, 0.22);
 }
 
 .edit {
-  background: #1976d2;
-  color: white;
-  margin-right: 6px;
+  background: #eff6ff;
+  color: var(--info);
+  border-color: #bfdbfe;
 }
 
 .delete {
-  background: #d32f2f;
-  color: white;
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: #fecaca;
 }
 
+.edit:hover {
+  background: #dbeafe;
+}
 
-/* MOBILE (IGUAL PRODUTOS) */
+.delete:hover {
+  background: #fee2e2;
+}
+
+.primary:hover {
+  transform: translateY(-1px);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+tbody tr:hover {
+  background: rgba(248, 250, 252, 0.9);
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.filtros {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.busca {
+  width: 100%;
+}
+
+.filtro-data {
+  display: flex;
+  gap: 8px;
+}
+
+.filtro-data input {
+  width: 100%;
+}
+
+.input {
+  min-width: 150px;
+}
+
+.actions-cell {
+  white-space: nowrap;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pagination-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.pagination-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pagination-select select {
+  width: auto;
+  min-width: 86px;
+}
+
+.pagination-info {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pagination-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.pagination-actions button {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.pagination-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 @media (max-width: 768px) {
+  .page {
+    padding: 24px 12px 32px;
+  }
+
+  .filtros {
+    grid-template-columns: 1fr;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header h3 {
+    font-size: 24px;
+  }
+
+  .primary {
+    width: 100%;
+  }
 
   table,
   thead,
@@ -530,99 +745,73 @@ button {
   }
 
   tr {
-    background: white;
+    background: var(--surface);
     margin-bottom: 12px;
-    border-radius: 8px;
-    padding: 10px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    border-radius: 18px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    box-shadow: none;
   }
 
   td {
     display: flex;
     justify-content: space-between;
-    padding: 8px 6px;
+    gap: 16px;
+    padding: 10px 4px;
     border: none;
     font-size: 13px;
   }
 
   td::before {
     content: attr(data-label);
-    font-weight: 600;
-    color: #666;
+    font-weight: 700;
+    color: var(--text-muted);
   }
 
   .actions {
     justify-content: flex-end;
-    gap: 6px;
+    flex-wrap: wrap;
   }
 
-  .header {
+  td[data-label="Produtos"] {
     flex-direction: column;
     align-items: flex-start;
-    gap: 10px;
+    gap: 8px;
   }
 
-  .primary {
+  td[data-label="Produtos"] > div {
     width: 100%;
+    text-align: right;
+    background: var(--surface-soft);
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 12px;
   }
 
-
-   td[data-label="Produtos"] {
+  .pagination {
     flex-direction: column;
-    align-items: flex-start; /* mantém o label na esquerda */
-    gap: 4px;
+    align-items: stretch;
   }
 
-  td[data-label="Produtos"] > div {
+  .pagination-meta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pagination-select {
+    justify-content: space-between;
+  }
+
+  .pagination-select select {
     width: 100%;
-    text-align: right; /* 👈 só os produtos vão pra direita */
   }
 
-  td[data-label="Produtos"] > div {
-  background: #f9f9f9;
-  padding: 6px 8px;
-  border-radius: 6px;
-  font-size: 12px;
-}
-
-}
-
-.filtros {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.busca {
-  width: 100%;
-}
-
-.filtro-data {
-  display: flex;
-  gap: 8px;
-}
-
-.filtro-data input {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-}
-
-/* mobile */
-@media (max-width: 768px) {
-  .filtros {
-    grid-template-columns: 1fr;
+  .pagination-actions {
+    width: 100%;
   }
-}
 
-.input {
-  padding: 8px 10px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  flex: 1;
-  min-width: 150px;
+  .pagination-actions button {
+    flex: 1;
+  }
 }
 </style>

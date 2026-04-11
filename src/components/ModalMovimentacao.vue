@@ -86,8 +86,9 @@ export default {
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.45);
-  backdrop-filter: blur(4px);
+  z-index: 2000;
+  background: rgba(15, 23, 42, 0.52);
+  backdrop-filter: blur(6px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -97,14 +98,14 @@ export default {
 .modal {
   width: 100%;
   max-width: 380px;
-  background: white;
-  border-radius: 16px;
+  background: var(--surface);
+  border-radius: var(--radius-md);
   padding: 20px;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: var(--shadow-md);
   animation: fadeIn 0.2s ease;
 }
 
-/* HEADER */
 .header {
   display: flex;
   justify-content: space-between;
@@ -113,60 +114,59 @@ export default {
 }
 
 .header h3 {
-  font-size: 18px;
+  font-size: 22px;
   margin: 0;
+  letter-spacing: -0.02em;
 }
 
-/* BADGE */
 .badge {
   font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
   margin-top: 4px;
   display: inline-block;
+  font-weight: 700;
 }
 
 .badge.entrada {
-  background: #e8f5e9;
-  color: #2e7d32;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .badge.saida {
-  background: #fdecea;
-  color: #c62828;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
-/* CLOSE */
 .close {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f3f4f6;
-  border: none;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
   width: 36px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
   font-size: 16px;
-  color: #555;
+  color: var(--text-muted);
   transition: all 0.2s;
 }
 
 .close:hover {
-  background: #e5e7eb;
+  background: var(--surface-muted);
   transform: scale(1.05);
 }
 
-/* PRODUTO */
 .produto {
-  background: #f9fafb;
-  padding: 10px;
-  border-radius: 10px;
+  background: var(--surface-soft);
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
   font-weight: 500;
   margin-bottom: 16px;
 }
 
-/* FIELD */
 .field {
   display: flex;
   flex-direction: column;
@@ -176,24 +176,14 @@ export default {
 
 label {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--text-muted);
+  font-weight: 600;
 }
 
 input {
-  padding: 10px;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
   font-size: 14px;
-  transition: all 0.2s;
 }
 
-input:focus {
-  outline: none;
-  border-color: #ff6a00;
-  box-shadow: 0 0 0 3px rgba(255,106,0,0.15);
-}
-
-/* ACTIONS */
 .actions {
   display: flex;
   gap: 10px;
@@ -202,29 +192,30 @@ input:focus {
 
 button {
   padding: 10px;
-  border-radius: 10px;
-  border: none;
+  border-radius: 12px;
+  border: 1px solid transparent;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
   transition: all 0.2s;
 }
 
 .primary {
-  background: linear-gradient(135deg, #ff7a00, #ff5a00);
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
   color: white;
 }
 
 .primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(255,106,0,0.3);
+  box-shadow: 0 6px 16px rgba(249, 115, 22, 0.3);
 }
 
 .secondary {
-  background: #f3f4f6;
+  background: var(--surface-soft);
+  border-color: var(--border);
 }
 
 .secondary:hover {
-  background: #e5e7eb;
+  background: var(--surface-muted);
 }
 
 /* ANIMAÇÃO */

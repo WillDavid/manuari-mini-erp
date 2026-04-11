@@ -98,12 +98,17 @@ export default {
 
 .card {
   position: relative;
+  width: 100px;
+  height: 100px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
 }
 
 img {
-  width: 100px;
-  height: 100px;
-  border-radius: 8px;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
@@ -113,5 +118,24 @@ img {
   right: 4px;
   display: flex;
   gap: 4px;
+}
+
+.actions button {
+  width: 24px;
+  height: 24px;
+  min-height: auto;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.72);
+  color: white;
+  cursor: pointer;
+}
+
+input[type='file'] {
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px dashed var(--border-strong);
+  background: var(--surface-soft);
 }
 </style>

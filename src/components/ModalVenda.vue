@@ -202,8 +202,9 @@ export default {
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.45);
-  backdrop-filter: blur(4px);
+  z-index: 2000;
+  background: rgba(15, 23, 42, 0.52);
+  backdrop-filter: blur(6px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -213,15 +214,15 @@ export default {
 .modal {
   width: 100%;
   max-width: 720px;
-  background: white;
-  border-radius: 16px;
+  background: var(--surface);
+  border-radius: var(--radius-md);
   padding: 24px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: var(--shadow-md);
 }
 
-/* HEADER */
 .header {
   display: flex;
   justify-content: space-between;
@@ -230,26 +231,27 @@ export default {
 }
 
 .header h2 {
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .close {
   font-size: 20px;
-  background: #f3f4f6;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
   width: 36px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
-/* GRID */
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
 
-/* FIELD */
 .field {
   display: flex;
   flex-direction: column;
@@ -258,26 +260,15 @@ export default {
 
 label {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--text-muted);
+  font-weight: 600;
 }
 
-/* INPUTS */
 input, select {
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
-  background: #fff;
+  background: var(--surface);
   font-size: 14px;
-  transition: all 0.2s;
 }
 
-input:focus, select:focus {
-  outline: none;
-  border-color: #ff6a00;
-  box-shadow: 0 0 0 3px rgba(255,106,0,0.15);
-}
-
-/* ADD */
 .add {
   display: flex;
   gap: 10px;
@@ -288,7 +279,6 @@ input:focus, select:focus {
   flex: 1;
 }
 
-/* ITENS */
 .itens {
   display: flex;
   flex-direction: column;
@@ -301,8 +291,8 @@ input:focus, select:focus {
   gap: 10px;
   padding: 12px;
   border-radius: 12px;
-  background: #fafafa;
-  border: 1px solid #eee;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
   align-items: center;
 }
 
@@ -311,27 +301,25 @@ input:focus, select:focus {
 }
 
 .preco {
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .subtotal {
   font-weight: 600;
 }
 
-/* EMPTY */
 .empty {
   text-align: center;
   padding: 20px;
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
-/* RESUMO */
 .resumo {
   margin-top: 20px;
-  background: #f9fafb;
+  background: var(--surface-soft);
   padding: 16px;
   border-radius: 12px;
-  border: 1px solid #eee;
+  border: 1px solid var(--border);
 }
 
 .linha {
@@ -346,7 +334,6 @@ input:focus, select:focus {
   font-weight: 600;
 }
 
-/* INPUT GROUP */
 .input-group {
   display: flex;
   align-items: center;
@@ -358,50 +345,50 @@ input:focus, select:focus {
   text-align: center;
 }
 
-/* BOTÕES */
 button {
-  border: none;
-  border-radius: 10px;
+  border: 1px solid transparent;
+  border-radius: 12px;
   padding: 12px;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
   transition: all 0.2s;
 }
 
 .primary {
-  background: linear-gradient(135deg, #ff7a00, #ff5a00);
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
   color: white;
 }
 
 .primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(255,106,0,0.3);
+  box-shadow: 0 8px 20px rgba(249, 115, 22, 0.3);
 }
 
 .secondary {
-  background: #f3f4f6;
+  background: var(--surface-soft);
+  border-color: var(--border);
 }
 
 .secondary:hover {
-  background: #e5e7eb;
+  background: var(--surface-muted);
 }
 
 .remove {
-  background: #ffe4e4;
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: #fecaca;
 }
 
 .remove:hover {
-  background: #ffc9c9;
+  background: #fee2e2;
 }
 
-/* ACTIONS */
 .actions {
   display: flex;
   gap: 10px;
   margin-top: 20px;
 }
 
-/* RESPONSIVO */
 @media (max-width: 600px) {
   .grid {
     grid-template-columns: 1fr;
