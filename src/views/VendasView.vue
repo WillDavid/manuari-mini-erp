@@ -142,6 +142,7 @@ export default {
       itensPorPagina: 100,
       modalAberto: false,
       vendaEditando: null,
+      isLoading: false,
 
       busca: '',
       dataInicio: '',
@@ -211,6 +212,8 @@ export default {
     },
 
     async salvarVenda(venda) {
+  if (this.isLoading) return
+  this.isLoading = true
 
   try {
 
@@ -376,6 +379,8 @@ export default {
   } catch (error) {
     console.error(error)
     alert('Erro ao salvar venda')
+  } finally {
+    this.isLoading = false
   }
 },
 

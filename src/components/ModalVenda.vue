@@ -106,11 +106,11 @@
 
       <!-- ACTIONS -->
       <div class="actions">
-        <button class="primary" @click="submit">
-          {{ editando ? 'Atualizar' : 'Finalizar Venda' }}
+        <button class="primary" @click="submit" :disabled="isLoading">
+          {{ isLoading ? 'Processando...' : editando ? 'Atualizar' : 'Finalizar Venda' }}
         </button>
 
-        <button class="secondary" @click="$emit('fechar')">
+        <button class="secondary" @click="$emit('fechar')" :disabled="isLoading">
           Cancelar
         </button>
       </div>
@@ -125,6 +125,7 @@ export default {
 
   data() {
     return {
+      isLoading: false,
       produtoSelecionado: '',
       venda: this.vendaInicial || {
         cliente: '',
@@ -206,13 +207,23 @@ export default {
       )
     },
 
-    submit() {
+    async submit() {
+      if (this.isLoading) return
+      
       if (this.venda.itens.length === 0) {
         alert('Adicione produtos')
         return
       }
 
-      this.$emit('salvar', this.venda)
+      this.isLoading = true
+
+      try {
+        await new Promise(resolve => this.$emit('salvar', this.venda))
+      } catch (error) {
+        console.error('Erro ao salvar venda:', error)
+      } finally {
+        this.isLoading = false
+      }
     }
   }
 }
@@ -381,7 +392,16 @@ button {
 
 .primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(249, 115, 22, 0.3);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+button:disabled.primary {
+  transform: none;
+  box-shadow: none;
 }
 
 .secondary {

@@ -15,8 +15,8 @@
           required
         />
 
-        <button type="submit" class="btn-primary">
-          Entrar
+        <button type="submit" class="btn-primary" :disabled="isLoading">
+          {{ isLoading ? 'Entrando...' : 'Entrar' }}
         </button>
       </form>
 
@@ -32,9 +32,10 @@ const SENHA_CORRETA = 'tuti@123'
 const DIAS_LOGADO = 30
 
 export default {
-  data() {
+data() {
     return {
-      password: '',
+      isLoading: false,
+      username: '',
       logo,
       erro: ''
     }
@@ -50,16 +51,29 @@ export default {
   },
 
   methods: {
-    identifyUser() {
+    async identifyUser() {
+      if (this.isLoading) return
+
       if (this.password !== SENHA_CORRETA) {
         this.erro = 'Senha incorreta'
         this.password = ''
         return
       }
 
-      const expiresAt = Date.now() + (DIAS_LOGADO * 24 * 60 * 60 * 1000)
-      localStorage.setItem('authExpires', expiresAt.toString())
-      this.$router.push('/vendas')
+      this.isLoading = true
+      this.erro = ''
+
+      try {
+        await new Promise(resolve => setTimeout(resolve, 300))
+        
+        const expiresAt = Date.now() + (DIAS_LOGADO * 24 * 60 * 60 * 1000)
+        localStorage.setItem('authExpires', expiresAt.toString())
+        this.$router.push('/vendas')
+      } catch (error) {
+        this.erro = 'Erro ao entrar. Tente novamente.'
+      } finally {
+        this.isLoading = false
+      }
     }
   }
 }

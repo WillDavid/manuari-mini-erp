@@ -42,11 +42,11 @@
         </div>
 
         <div class="actions">
-          <button class="primary" type="submit">
-            {{ editando ? 'Atualizar' : 'Salvar' }}
+          <button class="primary" type="submit" :disabled="isLoading">
+            {{ isLoading ? 'Processando...' : editando ? 'Atualizar' : 'Salvar' }}
           </button>
 
-          <button class="secondary" type="button" @click="$emit('fechar')">
+          <button class="secondary" type="button" @click="$emit('fechar')" :disabled="isLoading">
             Cancelar
           </button>
         </div>
@@ -62,6 +62,7 @@ export default {
 
   data() {
     return {
+      isLoading: false,
       localProduto: { ...this.produto }
     }
   },
@@ -74,14 +75,24 @@ export default {
       ) || 0
     },
 
-    submit() {
-      const produtoTratado = {
-        ...this.localProduto,
-        preco_custo: this.parseMoney(this.localProduto.preco_custo),
-        preco_venda: this.parseMoney(this.localProduto.preco_venda)
-      }
+    async submit() {
+      if (this.isLoading) return
 
-      this.$emit('salvar', produtoTratado)
+      this.isLoading = true
+
+      try {
+        const produtoTratado = {
+          ...this.localProduto,
+          preco_custo: this.parseMoney(this.localProduto.preco_custo),
+          preco_venda: this.parseMoney(this.localProduto.preco_venda)
+        }
+
+        this.$emit('salvar', produtoTratado)
+      } catch (error) {
+        console.error('Erro ao salvar produto:', error)
+      } finally {
+        this.isLoading = false
+      }
     }
   }
 }

@@ -78,11 +78,11 @@
         </div>
 
         <div class="actions">
-          <button class="primary" type="submit">
-            {{ editando ? 'Atualizar' : 'Salvar' }}
+          <button class="primary" type="submit" :disabled="isLoading">
+            {{ isLoading ? 'Processando...' : editando ? 'Atualizar' : 'Salvar' }}
           </button>
 
-          <button class="secondary" type="button" @click="$emit('fechar')">
+          <button class="secondary" type="button" @click="$emit('fechar')" :disabled="isLoading">
             Cancelar
           </button>
         </div>
@@ -96,39 +96,30 @@
 export default {
   props: ['movimentacao', 'editando'],
 
-  data() {
-    const mov = this.movimentacao
+data() {
     return {
-      localMovimentacao: {
-        tipo: mov?.tipo || 'pagar',
-        descricao: mov?.descricao || '',
-        valor: mov?.valor || 0,
-        forma_pagamento: mov?.forma_pagamento || '',
-        data_venda: mov?.data_venda || this.getHoje(),
-        data_vencimento: mov?.data_vencimento || this.getHoje(),
-        parcelas: mov?.parcelas || 1,
-        status: mov?.status || 'pendente'
-      }
-    }
-  },
-
-computed: {
-    tipoLabel() {
-      return this.localMovimentacao.tipo === 'receber' ? 'Conta a Receber' : 'Conta a Pagar'
+      isLoading: false,
+      localMovimentacao: { ...this.movimentacao }
     }
   },
 
   methods: {
-    getHoje() {
-      return new Date().toISOString().split('T')[0]
-    },
+    async submit() {
+      if (this.isLoading) return
 
-    submit() {
-      const mov = {
-        ...this.localMovimentacao,
-        valor: Number(this.localMovimentacao.valor) || 0
+      this.isLoading = true
+
+      try {
+        const mov = {
+          ...this.localMovimentacao,
+          valor: Number(this.localMovimentacao.valor) || 0
+        }
+        this.$emit('salvar', mov)
+      } catch (error) {
+        console.error('Erro ao salvar:', error)
+      } finally {
+        this.isLoading = false
       }
-      this.$emit('salvar', mov)
     }
   }
 }

@@ -37,11 +37,11 @@
         </div>
 
         <div class="actions">
-          <button class="primary" type="submit">
-            {{ editando ? 'Atualizar' : 'Salvar' }}
+          <button class="primary" type="submit" :disabled="isLoading">
+            {{ isLoading ? 'Processando...' : editando ? 'Atualizar' : 'Salvar' }}
           </button>
 
-          <button class="secondary" type="button" @click="$emit('fechar')">
+          <button class="secondary" type="button" @click="$emit('fechar')" :disabled="isLoading">
             Cancelar
           </button>
         </div>
@@ -57,17 +57,22 @@ export default {
 
   data() {
     return {
-      localConta: { ...this.conta }
+      isLoading: false,
+      localConta: { ...conta }
     }
   },
 
   methods: {
     submit() {
+      if (this.isLoading) return
+      this.isLoading = true
+
       const conta = {
         ...this.localConta,
         valor: Number(this.localConta.valor) || 0
       }
       this.$emit('salvar', conta)
+      setTimeout(() => { this.isLoading = false }, 500)
     }
   }
 }
