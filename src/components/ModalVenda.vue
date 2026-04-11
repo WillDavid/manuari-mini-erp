@@ -91,8 +91,7 @@
             <option value="">Selecione</option>
             <option>Pix</option>
             <option>Dinheiro</option>
-            <option>Cartão</option>
-            <option>Cartão de Crédito</option>
+            <option>Credito</option>
           </select>
         </div>
 
@@ -142,7 +141,7 @@ export default {
 
   computed: {
     mostrarParcelas() {
-      return this.venda.forma_pagamento === 'Cartão de Crédito'
+      return this.venda.forma_pagamento === 'Credito'
     }
   },
 

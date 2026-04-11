@@ -1,27 +1,82 @@
 import { supabase } from './supabase'
 
-export const FORMA_PAGAMENTO_RECEBIDO = ['Dinheiro', 'Pix']
-export const FORMA_PAGAMENTO_PENDENTE = ['Cartão', 'Cartão de Crédito']
+export const FORMA_PAGAMENTO_RECEBIDO = ['pix', 'dinheiro']
+export const FORMA_PAGAMENTO_PENDENTE = ['credito']
 
-export async function criarContaReceber(vendaId, cliente, valor, formaPagamento, dataVenda) {
-  const recebido = FORMA_PAGAMENTO_RECEBIDO.includes(formaPagamento)
-  
-  const payload = {
-    venda_id: vendaId,
-    tipo: 'receber',
-    descricao: cliente ? `Venda #${vendaId} - ${cliente}` : `Venda #${vendaId}`,
-    valor: valor,
-    forma_pagamento: formaPagamento,
-    data_venda: dataVenda,
-    data_vencimento: dataVenda,
-    status: recebido ? 'recebido' : 'pendente'
+export const STATUS_RECEBIDO = 'recebido'
+export const STATUS_PENDENTE = 'pendente'
+export const STATUS_PAGO = 'pago'
+
+export function calcularParcelas(valorTotal, numeroParcelas) {
+  const valorParcela = valorTotal / numeroParcelas
+  return {
+    valorParcela: Math.round(valorParcela * 100) / 100,
+    valorTotal: valorTotal
+  }
+}
+
+export function calcularDataVencimento(dataBase, mesesAdicionais) {
+  const data = new Date(dataBase)
+  data.setMonth(data.getMonth() + mesesAdicionais)
+  return data.toISOString()
+}
+
+export async function criarContasReceberDaVenda(venda) {
+  const {
+    id: vendaId,
+    data_venda,
+    forma_pagamento,
+    parcelas,
+    valor_parcela,
+    total_final: valorTotal
+  } = venda
+
+  const recebido = FORMA_PAGAMENTO_RECEBIDO.includes(forma_pagamento)
+
+  if (forma_pagamento === 'credito') {
+    const numeroParcelas = parcelas || 1
+    const valorParcela = valor_parcela || (valorTotal / numeroParcelas)
+
+    const contas = []
+    for (let i = 0; i < numeroParcelas; i++) {
+      const dataVencimento = calcularDataVencimento(data_venda, i)
+
+      contas.push({
+        venda_id: vendaId,
+        valor: valorParcela,
+        data_vencimento: dataVencimento,
+        status: STATUS_PENDENTE,
+        numero_parcela: i + 1,
+        total_parcelas: numeroParcelas,
+        forma_pagamento: forma_pagamento
+      })
+    }
+
+    const { data, error } = await supabase
+      .from('contas_receber')
+      .insert(contas)
+      .select()
+
+    if (error) {
+      console.error('Erro ao criar contas a receber:', error)
+      return null
+    }
+
+    return data
   }
 
   const { data, error } = await supabase
-    .from('contas_financeiro')
-    .insert([payload])
+    .from('contas_receber')
+    .insert([{
+      venda_id: vendaId,
+      valor: valorTotal,
+      data_vencimento: data_venda,
+      status: recebido ? STATUS_RECEBIDO : STATUS_PENDENTE,
+      numero_parcela: 1,
+      total_parcelas: 1,
+      forma_pagamento: forma_pagamento
+    }])
     .select()
-    .single()
 
   if (error) {
     console.error('Erro ao criar conta a receber:', error)
@@ -31,18 +86,17 @@ export async function criarContaReceber(vendaId, cliente, valor, formaPagamento,
   return data
 }
 
-export async function criarContaPagar(descricao, valor, dataVencimento, formaPagamento = 'Transferencia') {
+export async function criarContaPagar(descricao, valor, dataVencimento, formaPagamento = 'transferencia') {
   const payload = {
-    tipo: 'pagar',
-    descricao: descricao,
-    valor: valor,
+    descricao,
+    valor,
     data_vencimento: dataVencimento,
     forma_pagamento: formaPagamento,
-    status: 'pendente'
+    status: STATUS_PENDENTE
   }
 
   const { data, error } = await supabase
-    .from('contas_financeiro')
+    .from('contas_pagar')
     .insert([payload])
     .select()
     .single()
@@ -55,9 +109,43 @@ export async function criarContaPagar(descricao, valor, dataVencimento, formaPag
   return data
 }
 
-export async function atualizarStatusConta(id, novoStatus) {
+export async function buscarContasReceber(vendaId = null) {
+  let query = supabase
+    .from('contas_receber')
+    .select('*')
+    .order('data_vencimento', { ascending: true })
+
+  if (vendaId) {
+    query = query.eq('venda_id', vendaId)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    console.error('Erro ao buscar contas a receber:', error)
+    return []
+  }
+
+  return data || []
+}
+
+export async function buscarContasPagar() {
   const { data, error } = await supabase
-    .from('contas_financeiro')
+    .from('contas_pagar')
+    .select('*')
+    .order('data_vencimento', { ascending: true })
+
+  if (error) {
+    console.error('Erro ao buscar contas a pagar:', error)
+    return []
+  }
+
+  return data || []
+}
+
+export async function atualizarStatusContaReceber(id, novoStatus) {
+  const { data, error } = await supabase
+    .from('contas_receber')
     .update({ status: novoStatus })
     .eq('id', id)
     .select()
@@ -71,53 +159,55 @@ export async function atualizarStatusConta(id, novoStatus) {
   return data
 }
 
-export async function buscarContas(tipo = null, status = null) {
-  let query = supabase
-    .from('contas_financeiro')
-    .select('*')
-    .order('created_at', { ascending: false })
-
-  if (tipo) {
-    query = query.eq('tipo', tipo)
-  }
-
-  if (status) {
-    query = query.eq('status', status)
-  }
-
-  const { data, error } = await query
+export async function atualizarStatusContaPagar(id, novoStatus) {
+  const { data, error } = await supabase
+    .from('contas_pagar')
+    .update({ status: novoStatus })
+    .eq('id', id)
+    .select()
+    .single()
 
   if (error) {
-    console.error('Erro ao buscar contas:', error)
-    return []
+    console.error('Erro ao atualizar status:', error)
+    return null
   }
 
-  return data || []
+  return data
 }
 
-export async function buscarContasReceber(status = null) {
-  return buscarContas('receber', status)
+export async function deletarContaReceber(vendaId) {
+  const { error } = await supabase
+    .from('contas_receber')
+    .delete()
+    .eq('venda_id', vendaId)
+
+  if (error) {
+    console.error('Erro ao deletar contas:', error)
+    return false
+  }
+
+  return true
 }
 
-export async function buscarContasPagar(status = null) {
-  return buscarContas('pagar', status)
+export async function buscarContasPorVenda(vendaId) {
+  return buscarContasReceber(vendaId)
 }
 
-export function calcularFluxoCaixa(contas) {
-  const entradas = contas
-    .filter(c => c.tipo === 'receber' && c.status === 'recebido')
+export function calcularFluxoCaixa(contasReceber, contasPagar) {
+  const entradas = contasReceber
+    .filter(c => c.status === STATUS_RECEBIDO)
     .reduce((acc, c) => acc + c.valor, 0)
 
-  const saidas = contas
-    .filter(c => c.tipo === 'pagar' && c.status === 'pago')
+  const saidas = contasPagar
+    .filter(c => c.status === STATUS_PAGO)
     .reduce((acc, c) => acc + c.valor, 0)
 
-  const pendentesReceber = contas
-    .filter(c => c.tipo === 'receber' && c.status === 'pendente')
+  const pendentesReceber = contasReceber
+    .filter(c => c.status === STATUS_PENDENTE)
     .reduce((acc, c) => acc + c.valor, 0)
 
-  const pendentesPagar = contas
-    .filter(c => c.tipo === 'pagar' && c.status === 'pendente')
+  const pendentesPagar = contasPagar
+    .filter(c => c.status === STATUS_PENDENTE)
     .reduce((acc, c) => acc + c.valor, 0)
 
   return {
@@ -126,7 +216,9 @@ export function calcularFluxoCaixa(contas) {
     saldoAtual: entradas - saidas,
     pendentesReceber,
     pendentesPagar,
-    saldoProjetado: entradas - saidas + pendentesReceber - pendentesPagar
+    saldoProjetado: entradas - saidas + pendentesReceber - pendentesPagar,
+    totalReceber: entradas + pendentesReceber,
+    totalPagar: saidas + pendentesPagar
   }
 }
 

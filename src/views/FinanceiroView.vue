@@ -4,14 +4,14 @@
     <!-- BANNER -->
     <div class="construction-banner">
       <span class="badge">Novo</span>
-      <p>Contas integradas com vendas. Clique em "Receber" para gerar uma nova conta.</p>
+      <p>Financeiro integrado com vendas. Use as abas para gerenciar.</p>
     </div>
 
     <!-- HEADER -->
     <div class="header">
       <h3>Financeiro</h3>
-      <button class="primary" @click="abrirNovaMovimentacao">
-        Nova Movimentacao
+      <button class="primary" @click="abrirNovaConta">
+        Nova Conta
       </button>
     </div>
 
@@ -86,16 +86,14 @@
     <!-- CONTAS A RECEBER -->
     <div v-if="abaAtiva === 'receber'" class="aba-content">
 
-      <!-- TABELA CONTAS A RECEBER -->
       <div class="table-card">
         <table>
           <thead>
             <tr>
-              <th>Data</th>
-              <th>Descricao</th>
+              <th>Venda</th>
+              <th>Parcela</th>
               <th>Valor</th>
-              <th>Forma</th>
-              <th>Parcelas</th>
+              <th>Vencimento</th>
               <th>Status</th>
               <th></th>
             </tr>
@@ -103,13 +101,12 @@
 
           <tbody>
             <tr v-for="conta in contasReceberPaginadas" :key="conta.id">
-              <td data-label="Data">{{ formatarData(conta.data_venda) }}</td>
-              <td data-label="Descricao">{{ conta.descricao }}</td>
+              <td data-label="Venda">#{{ conta.venda_id?.slice(0, 8) }}</td>
+              <td data-label="Parcela">{{ conta.numero_parcela }}/{{ conta.total_parcelas }}</td>
               <td data-label="Valor" :class="conta.status === 'recebido' ? 'positivo' : ''">
                 R$ {{ formatarPreco(conta.valor) }}
               </td>
-              <td data-label="Forma">{{ conta.forma_pagamento }}</td>
-              <td data-label="Parcelas">{{ conta.parcelas || 1 }}x</td>
+              <td data-label="Vencimento">{{ formatarData(conta.data_vencimento) }}</td>
               <td data-label="Status">
                 <span :class="['status-badge', conta.status]">
                   {{ conta.status === 'recebido' ? 'Recebido' : 'Pendente' }}
@@ -123,9 +120,6 @@
                 >
                   Receber
                 </button>
-                <button class="delete" @click="deletarConta(conta.id)">
-                  Excluir
-                </button>
               </td>
             </tr>
           </tbody>
@@ -133,10 +127,8 @@
       </div>
 
       <div v-if="contasReceberFiltradas.length" class="pagination">
-        <div class="pagination-meta">
-          <span class="pagination-info">
-            {{ contasReceberFiltradas.length }} conta(s) • Pagina {{ paginaReceber }} de {{ totalPaginasReceber }}
-          </span>
+        <div class="pagination-info">
+          {{ contasReceberFiltradas.length }} conta(s) • Pagina {{ paginaReceber }} de {{ totalPaginasReceber }}
         </div>
         <div class="pagination-actions">
           <button :disabled="paginaReceber === 1" @click="paginaReceber--">Anterior</button>
@@ -149,15 +141,13 @@
     <!-- CONTAS A PAGAR -->
     <div v-if="abaAtiva === 'pagar'" class="aba-content">
 
-      <!-- TABELA CONTAS A PAGAR -->
       <div class="table-card">
         <table>
           <thead>
             <tr>
-              <th>Data</th>
               <th>Descricao</th>
               <th>Valor</th>
-              <th>Forma</th>
+              <th>Vencimento</th>
               <th>Status</th>
               <th></th>
             </tr>
@@ -165,12 +155,11 @@
 
           <tbody>
             <tr v-for="conta in contasPagarPaginadas" :key="conta.id">
-              <td data-label="Data">{{ formatarData(conta.data_vencimento) }}</td>
               <td data-label="Descricao">{{ conta.descricao }}</td>
               <td data-label="Valor" :class="conta.status === 'pago' ? 'positivo' : 'negativo'">
                 R$ {{ formatarPreco(conta.valor) }}
               </td>
-              <td data-label="Forma">{{ conta.forma_pagamento }}</td>
+              <td data-label="Vencimento">{{ formatarData(conta.data_vencimento) }}</td>
               <td data-label="Status">
                 <span :class="['status-badge', conta.status]">
                   {{ conta.status === 'pago' ? 'Pago' : 'Pendente' }}
@@ -184,7 +173,7 @@
                 >
                   Pagar
                 </button>
-                <button class="delete" @click="deletarConta(conta.id)">
+                <button class="delete" @click="deletarContaPagar(conta.id)">
                   Excluir
                 </button>
               </td>
@@ -194,10 +183,8 @@
       </div>
 
       <div v-if="contasPagarFiltradas.length" class="pagination">
-        <div class="pagination-meta">
-          <span class="pagination-info">
-            {{ contasPagarFiltradas.length }} conta(s) • Pagina {{ paginaPagar }} de {{ totalPaginasPagar }}
-          </span>
+        <div class="pagination-info">
+          {{ contasPagarFiltradas.length }} conta(s) • Pagina {{ paginaPagar }} de {{ totalPaginasPagar }}
         </div>
         <div class="pagination-actions">
           <button :disabled="paginaPagar === 1" @click="paginaPagar--">Anterior</button>
@@ -207,13 +194,13 @@
 
     </div>
 
-    <!-- MODAL MOVIMENTACAO -->
-    <ModalMovimentacaoFinanceira
+    <!-- MODAL -->
+    <ModalContaPagar
       v-if="modalAberto"
-      :movimentacao="movimentacao"
+      :conta="contaEdicao"
       :editando="editando"
       @fechar="fecharModal"
-      @salvar="salvarMovimentacao"
+      @salvar="salvarConta"
     />
 
   </div>
@@ -221,38 +208,42 @@
 
 <script>
 import { supabase } from '../services/supabase'
-import ModalMovimentacaoFinanceira from '../components/ModalMovimentacaoFinanceira.vue'
+import {
+  buscarContasReceber,
+  buscarContasPagar,
+  atualizarStatusContaReceber,
+  atualizarStatusContaPagar,
+  criarContaPagar,
+  deletarContaReceber,
+  calcularFluxoCaixa,
+  STATUS_RECEBIDO,
+  STATUS_PENDENTE
+} from '../services/financeiro'
+import ModalContaPagar from '../components/ModalContaPagar.vue'
 
 const ITENS_POR_PAGINA = 10
 
 export default {
-  components: {
-    ModalMovimentacaoFinanceira
-  },
+  components: { ModalContaPagar },
 
   data() {
     return {
-      contas: [],
+      contasReceber: [],
+      contasPagar: [],
 
       abaAtiva: 'resumo',
       paginaReceber: 1,
       paginaPagar: 1,
 
-      busca: '',
-      filtroTipo: '',
       modalAberto: false,
       editando: false,
-      movimentacaoId: null,
+      contaEdicao: null,
 
-      movimentacao: {
-        tipo: 'receber',
+      contaEdicao: {
         descricao: '',
         valor: 0,
-        forma_pagamento: '',
-        data_venda: '',
         data_vencimento: '',
-        parcelas: 1,
-        status: 'pendente'
+        forma_pagamento: ''
       }
     }
   },
@@ -262,28 +253,20 @@ export default {
   },
 
   computed: {
-    contasReceber() {
-      return this.contas.filter(c => c.tipo === 'receber')
-    },
-
-    contasPagar() {
-      return this.contas.filter(c => c.tipo === 'pagar')
-    },
-
     contasReceberPendentes() {
-      return this.contasReceber.filter(c => c.status === 'pendente').length
+      return this.contasReceber.filter(c => c.status === STATUS_PENDENTE).length
     },
 
     contasPagarPendentes() {
-      return this.contasPagar.filter(c => c.status === 'pendente').length
+      return this.contasPagar.filter(c => c.status === STATUS_PENDENTE).length
     },
 
     contasReceberFiltradas() {
-      return this.contasReceber.sort((a, b) => new Date(b.data_venda) - new Date(a.data_venda))
+      return [...this.contasReceber].sort((a, b) => new Date(a.data_vencimento) - new Date(b.data_vencimento))
     },
 
     contasPagarFiltradas() {
-      return this.contasPagar.sort((a, b) => new Date(b.data_vencimento) - new Date(a.data_vencimento))
+      return [...this.contasPagar].sort((a, b) => new Date(a.data_vencimento) - new Date(b.data_vencimento))
     },
 
     totalPaginasReceber() {
@@ -305,113 +288,52 @@ export default {
     },
 
     fluxo() {
-      const entradas = this.contas
-        .filter(c => c.tipo === 'receber' && c.status === 'recebido')
-        .reduce((acc, c) => acc + c.valor, 0)
-
-      const saidas = this.contas
-        .filter(c => c.tipo === 'pagar' && c.status === 'pago')
-        .reduce((acc, c) => acc + c.valor, 0)
-
-      const pendentesReceber = this.contas
-        .filter(c => c.tipo === 'receber' && c.status === 'pendente')
-        .reduce((acc, c) => acc + c.valor, 0)
-
-      const pendentesPagar = this.contas
-        .filter(c => c.tipo === 'pagar' && c.status === 'pendente')
-        .reduce((acc, c) => acc + c.valor, 0)
-
-      return {
-        entradas,
-        saidas,
-        saldoAtual: entradas - saidas,
-        pendentesReceber,
-        pendentesPagar,
-        saldoProjetado: entradas - saidas + pendentesReceber - pendentesPagar
-      }
+      return calcularFluxoCaixa(this.contasReceber, this.contasPagar)
     }
   },
 
   methods: {
     async buscarContas() {
-      const { data, error } = await supabase
-        .from('contas_financeiro')
-        .select('*')
-        .order('created_at', { ascending: false })
+      this.contasReceber = await buscarContasReceber()
+      this.contasPagar = await buscarContasPagar()
+    },
 
-      if (!error) {
-        this.contas = data || []
+    abrirNovaConta() {
+      this.contaEdicao = {
+        descricao: '',
+        valor: 0,
+        data_vencimento: new Date().toISOString().split('T')[0],
+        forma_pagamento: ''
       }
-    },
-
-    abrirNovaMovimentacao() {
-      this.resetForm()
-      this.modalAberto = true
-    },
-
-    editarMovimentacao(m) {
-      this.movimentacao = { ...m }
-      this.movimentacaoId = m.id
-      this.editando = true
+      this.editando = false
       this.modalAberto = true
     },
 
     fecharModal() {
       this.modalAberto = false
-      this.resetForm()
+      this.contaEdicao = null
     },
 
-    async salvarMovimentacao(mov) {
-      if (this.editando) {
-        await supabase
-          .from('contas_financeiro')
-          .update(mov)
-          .eq('id', this.movimentacaoId)
-      } else {
-        await supabase
-          .from('contas_financeiro')
-          .insert([mov])
-      }
-
+    async salvarConta(conta) {
+      await criarContaPagar(conta.descricao, conta.valor, conta.data_vencimento, conta.forma_pagamento)
       this.fecharModal()
       await this.buscarContas()
     },
 
-    async deletarConta(id) {
-      if (!confirm('Excluir conta?')) return
-      await supabase.from('contas_financeiro').delete().eq('id', id)
-      await this.buscarContas()
-    },
-
     async marcarRecebido(id) {
-      await supabase
-        .from('contas_financeiro')
-        .update({ status: 'recebido' })
-        .eq('id', id)
+      await atualizarStatusContaReceber(id, STATUS_RECEBIDO)
       await this.buscarContas()
     },
 
     async marcarPago(id) {
-      await supabase
-        .from('contas_financeiro')
-        .update({ status: 'pago' })
-        .eq('id', id)
+      await atualizarStatusContaPagar(id, 'pago')
       await this.buscarContas()
     },
 
-    resetForm() {
-      this.editando = false
-      this.movimentacaoId = null
-      this.movimentacao = {
-        tipo: 'pagar',
-        descricao: '',
-        valor: 0,
-        forma_pagamento: '',
-        data_venda: '',
-        data_vencimento: '',
-        parcelas: 1,
-        status: 'pendente'
-      }
+    async deletarContaPagar(id) {
+      if (!confirm('Excluir conta?')) return
+      await supabase.from('contas_pagar').delete().eq('id', id)
+      await this.buscarContas()
     },
 
     formatarPreco(valor) {
@@ -421,8 +343,7 @@ export default {
 
     formatarData(data) {
       if (!data) return '-'
-      const d = data.split ? data.split('T')[0] : data
-      return d.split('-').reverse().join('/')
+      return data.split('T')[0].split('-').reverse().join('/')
     }
   }
 }
@@ -708,12 +629,6 @@ tbody tr:last-child td {
   gap: 12px;
 }
 
-.pagination-meta {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
 .pagination-info {
   color: var(--text-muted);
   font-size: 13px;
@@ -754,10 +669,6 @@ tbody tr:last-child td {
     flex-direction: column;
   }
 
-  .tabs {
-    overflow-x: auto;
-  }
-
   table, thead, tbody, th, td, tr {
     display: block;
   }
@@ -790,15 +701,6 @@ tbody tr:last-child td {
 
   .actions {
     justify-content: flex-end;
-  }
-
-  .pagination {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .pagination-actions button {
-    flex: 1;
   }
 }
 </style>
