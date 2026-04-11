@@ -138,7 +138,7 @@ export default {
       vendas: [],
       produtos: [],
       paginaAtual: 1,
-      itensPorPagina: 10,
+      itensPorPagina: 100,
       modalAberto: false,
       vendaEditando: null,
 
