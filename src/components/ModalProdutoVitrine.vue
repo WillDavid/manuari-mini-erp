@@ -11,64 +11,67 @@
       <!-- BODY -->
       <div class="modal-body">
 
-        <!-- NOME -->
-        <div class="form-group">
-          <label>Nome</label>
-          <input v-model="local.name" placeholder="Ex: Caneca Naruto" />
-        </div>
+        <!-- COLUNA ESQUERDA: Formulário -->
+        <div class="coluna-esquerda">
+          <!-- NOME -->
+          <div class="form-group">
+            <label>Nome</label>
+            <input v-model="local.name" placeholder="Ex: Caneca Naruto" />
+          </div>
 
-        <!-- TIPO -->
-        <div class="form-group">
-          <label>Tipo</label>
-          <select v-model="local.tipo">
-            <option disabled value="">Selecione</option>
-            <option v-for="t in tipos" :key="t" :value="t">
-              {{ t }}
-            </option>
-          </select>
-        </div>
+          <!-- TIPO -->
+          <div class="form-group">
+            <label>Tipo</label>
+            <select v-model="local.tipo">
+              <option disabled value="">Selecione</option>
+              <option v-for="t in tipos" :key="t" :value="t">
+                {{ t }}
+              </option>
+            </select>
+          </div>
 
-        <!-- CATEGORIAS -->
-        <div class="form-group">
-          <label>Categorias</label>
+          <!-- CATEGORIAS -->
+          <div class="form-group">
+            <label>Categorias</label>
 
-          <div class="categorias-box">
-            <div
-              v-for="cat in categoriasDisponiveis"
-              :key="cat"
-              :class="['categoria-item', isSelecionado(cat) ? 'ativo' : '']"
-              @click="toggleCategoria(cat)"
-            >
-              {{ cat }}
+            <div class="categorias-box">
+              <div
+                v-for="cat in categoriasDisponiveis"
+                :key="cat"
+                :class="['categoria-item', isSelecionado(cat) ? 'ativo' : '']"
+                @click="toggleCategoria(cat)"
+              >
+                {{ cat }}
+              </div>
+            </div>
+          </div>
+
+          <!-- TOGGLES -->
+          <div class="toggles">
+            <div class="toggle-item">
+              <span>Destaque</span>
+              <label class="switch">
+                <input type="checkbox" v-model="local.destaque" />
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="toggle-item">
+              <span>Lançamento</span>
+              <label class="switch">
+                <input type="checkbox" v-model="local.lancamento" />
+                <span class="slider"></span>
+              </label>
             </div>
           </div>
         </div>
 
-        <!-- TOGGLES -->
-        <div class="toggles">
-
-          <div class="toggle-item">
-            <span>Destaque</span>
-            <label class="switch">
-              <input type="checkbox" v-model="local.destaque" />
-              <span class="slider"></span>
-            </label>
+        <!-- COLUNA DIREITA: Imagens -->
+        <div class="coluna-direita">
+          <div class="form-group">
+            <label>Imagens</label>
+            <ImageManager v-model="local.images" />
           </div>
-
-          <div class="toggle-item">
-            <span>Lançamento</span>
-            <label class="switch">
-              <input type="checkbox" v-model="local.lancamento" />
-              <span class="slider"></span>
-            </label>
-          </div>
-
-        </div>
-
-        <!-- IMAGENS -->
-        <div class="form-group">
-          <label>Imagens</label>
-          <ImageManager v-model="local.images" />
         </div>
 
       </div>
@@ -196,7 +199,8 @@ export default {
 
 .modal {
   background: var(--surface);
-  width: min(520px, 100%);
+  width: 90%;
+  max-width: 900px;
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   border: 1px solid rgba(255, 255, 255, 0.35);
@@ -232,8 +236,20 @@ export default {
 .modal-body {
   padding: 20px;
   display: flex;
+  gap: 24px;
+}
+
+.coluna-esquerda {
+  flex: 1;
+  display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.coluna-direita {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .form-group {
@@ -362,7 +378,17 @@ input:checked + .slider::before {
   border-color: var(--border);
 }
 
-@media (max-width: 600px) {
+@media (max-width: 700px) {
+  .modal {
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-body {
+    flex-direction: column;
+  }
+
   .toggles,
   .modal-footer {
     flex-direction: column;

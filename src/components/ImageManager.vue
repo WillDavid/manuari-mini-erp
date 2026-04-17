@@ -13,21 +13,87 @@
       </div>
     </div>
 
-    <input type="file" @change="upload" />
+    <input type="file" @change="onFileSelect" accept="image/*" />
+
+    <ImageCropper
+      v-if="cropperSrc"
+      :src="cropperSrc"
+      @cancel="cropperSrc = null"
+      @crop="onCrop"
+    />
 
   </div>
 </template>
 
 <script>
 import { supabase } from '../services/supabase'
+import ImageCropper from './ImageCropper.vue'
 
 export default {
+  components: { ImageCropper },
+  
   props: ['modelValue'],
   emits: ['update:modelValue'],
+
+  data() {
+    return {
+      cropperSrc: null,
+      pendingFile: null
+    }
+  },
 
   methods: {
     atualizar(v) {
       this.$emit('update:modelValue', v)
+    },
+
+    onFileSelect(e) {
+      const file = e.target.files[0]
+      if (!file) return
+
+      const reader = new FileReader()
+      reader.onload = (evt) => {
+        this.cropperSrc = evt.target.result
+        this.pendingFile = file
+      }
+      reader.readAsDataURL(file)
+      e.target.value = ''
+    },
+
+    async onCrop(blob) {
+      const file = this.pendingFile
+      this.cropperSrc = null
+      this.pendingFile = null
+
+      if (!file) return
+
+      const sanitizeFileName = (name) => {
+        return name
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/\s+/g, "_")
+          .replace(/[^a-zA-Z0-9._-]/g, "")
+      }
+
+      const cleanName = sanitizeFileName(file.name)
+      const tipo = this.$parent.local?.tipo || 'outros'
+      const path = `${tipo}/${Date.now()}-${cleanName}`
+
+      const { error } = await supabase.storage
+        .from('products')
+        .upload(path, blob, { upsert: true })
+
+      if (error) {
+        console.error(error)
+        alert(error.message)
+        return
+      }
+
+      const { data } = supabase.storage
+        .from('products')
+        .getPublicUrl(path)
+
+      this.atualizar([...this.modelValue, data.publicUrl])
     },
 
     remover(i) {
@@ -48,43 +114,7 @@ export default {
       if (i === arr.length - 1) return
       ;[arr[i], arr[i+1]] = [arr[i+1], arr[i]]
       this.atualizar(arr)
-    },
-
-    async upload(e) {
-  const file = e.target.files[0]
-  if (!file) return
-
-  const sanitizeFileName = (name) => {
-    return name
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/\s+/g, "_")
-      .replace(/[^a-zA-Z0-9._-]/g, "")
-  }
-
-  const cleanName = sanitizeFileName(file.name)
-
-  // 👇 pega tipo do produto (IMPORTANTE)
-  const tipo = this.$parent.local.tipo || 'outros'
-
-  const path = `${tipo}/${Date.now()}-${cleanName}`
-
-  const { error } = await supabase.storage
-    .from('products')
-    .upload(path, file, { upsert: true })
-
-  if (error) {
-    console.error(error)
-    alert(error.message)
-    return
-  }
-
-  const { data } = supabase.storage
-    .from('products')
-    .getPublicUrl(path)
-
-  this.atualizar([...this.modelValue, data.publicUrl])
-}
+    }
   }
 }
 </script>
