@@ -12,20 +12,23 @@
     <div class="filtros">
       <input
         v-model="busca"
-        placeholder="Buscar por nome, tipo, categoria, destaque ou lancamento..."
+        placeholder="Buscar por nome, tipo ou categoria..."
         class="input busca"
       />
+      <select v-model="ordenacao" class="input ordenacao">
+        <option value="novos">Mais novos</option>
+        <option value="relevantes">Mais relevantes</option>
+      </select>
     </div>
 
     <!-- TABELA -->
     <div class="table-card">
       <table>
-        <thead>
+          <thead>
           <tr>
             <th>Produto</th>
             <th>Categorias</th>
-            <th>Destaque</th>
-            <th>Lançamento</th>
+            <th>Acessos</th>
             <th></th>
           </tr>
         </thead>
@@ -71,17 +74,9 @@
               </span>
             </td>
 
-            <!-- FLAGS -->
-            <td data-label="Destaque">
-              <span :class="p.destaque ? 'ativo' : 'inativo'">
-                {{ p.destaque ? 'Sim' : 'Não' }}
-              </span>
-            </td>
-
-            <td data-label="Lançamento">
-              <span :class="p.lancamento ? 'ativo' : 'inativo'">
-                {{ p.lancamento ? 'Sim' : 'Não' }}
-              </span>
+            <!-- ACESSOS -->
+            <td data-label="Acessos">
+              <span class="access-count">{{ p.acessos || 0 }}</span>
             </td>
 
             <!-- AÇÕES -->
@@ -147,6 +142,7 @@ export default {
     return {
       produtos: [],
       busca: '',
+      ordenacao: 'novos',
       paginaAtual: 1,
       itensPorPagina: 100,
       modal: false,
@@ -157,8 +153,6 @@ export default {
         name: '',
         tipo: '',
         categorias: [],
-        destaque: false,
-        lancamento: false,
         images: []
       }
     }
@@ -170,10 +164,11 @@ export default {
 
   methods: {
     async buscar() {
+      const campoOrdenacao = this.ordenacao === 'relevantes' ? 'acessos' : 'created_at'
       const { data } = await supabase
         .from('products')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order(campoOrdenacao, { ascending: false })
 
       this.produtos = data || []
       this.ajustarPagina()
@@ -231,8 +226,6 @@ export default {
         name: '',
         tipo: '',
         categorias: [],
-        destaque: false,
-        lancamento: false,
         images: []
       }
     },
@@ -260,14 +253,10 @@ export default {
 
       return this.produtos.filter((produto) => {
         const categorias = Array.isArray(produto.categorias) ? produto.categorias.join(' ') : ''
-        const destaque = produto.destaque ? 'sim destaque' : 'nao sem destaque'
-        const lancamento = produto.lancamento ? 'sim lancamento' : 'nao sem lancamento'
         const conteudo = [
           produto.name,
           produto.tipo,
           categorias,
-          destaque,
-          lancamento,
         ]
           .filter(Boolean)
           .join(' ')
@@ -294,6 +283,10 @@ export default {
 
     itensPorPagina() {
       this.paginaAtual = 1
+    },
+
+    ordenacao() {
+      this.buscar()
     }
   }
 }
@@ -322,12 +315,16 @@ export default {
 
 .filtros {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 180px;
   gap: 12px;
   margin-bottom: 20px;
 }
 
 .busca {
+  width: 100%;
+}
+
+.ordenacao {
   width: 100%;
 }
 
@@ -425,6 +422,17 @@ td {
   border-radius: 999px;
   margin-right: 4px;
   color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.access-count {
+  display: inline-flex;
+  align-items: center;
+  background: var(--info-soft);
+  padding: 5px 10px;
+  border-radius: 999px;
+  color: var(--info);
   font-size: 12px;
   font-weight: 600;
 }

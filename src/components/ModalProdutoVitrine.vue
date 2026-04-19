@@ -48,21 +48,9 @@
 
           <!-- TOGGLES -->
           <div class="toggles">
-            <div class="toggle-item">
-              <span>Destaque</span>
-              <label class="switch">
-                <input type="checkbox" v-model="local.destaque" />
-                <span class="slider"></span>
-              </label>
-            </div>
+            
 
-            <div class="toggle-item">
-              <span>Lançamento</span>
-              <label class="switch">
-                <input type="checkbox" v-model="local.lancamento" />
-                <span class="slider"></span>
-              </label>
-            </div>
+            
           </div>
         </div>
 
@@ -107,7 +95,8 @@ export default {
         'canecas',
         'xicaras',
         'azulejos',
-        'canecas 3d'
+        'canecas 3d',
+        'bottons'
       ],
 
       categoriasDisponiveis: [
@@ -146,15 +135,13 @@ export default {
   },
 
   methods: {
-    getProdutoInicial() {
+getProdutoInicial() {
       return {
         name: this.produto?.name || '',
         tipo: this.produto?.tipo || '',
         categorias: Array.isArray(this.produto?.categorias)
           ? [...this.produto.categorias]
           : [],
-        destaque: this.produto?.destaque || false,
-        lancamento: this.produto?.lancamento || false,
         images: Array.isArray(this.produto?.images)
           ? [...this.produto.images]
           : []
