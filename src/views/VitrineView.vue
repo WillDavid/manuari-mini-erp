@@ -1,7 +1,5 @@
 <template>
   <div class="page">
-
-    <!-- HEADER -->
     <div class="header">
       <h3>Vitrine</h3>
       <button class="primary" @click="abrirNovo">
@@ -12,7 +10,7 @@
     <div class="filtros">
       <input
         v-model="busca"
-        placeholder="Buscar por nome, tipo ou categoria..."
+        placeholder="Buscar por nome, tipo, categoria ou variacao..."
         class="input busca"
       />
       <select v-model="ordenacao" class="input ordenacao">
@@ -21,13 +19,17 @@
       </select>
     </div>
 
-    <!-- TABELA -->
-    <div class="table-card">
+    <p v-if="erro" class="feedback erro">{{ erro }}</p>
+    <p v-else-if="carregando" class="feedback">Carregando vitrine...</p>
+
+    <div v-else class="table-card">
       <table>
-          <thead>
+        <thead>
           <tr>
             <th>Produto</th>
             <th>Categorias</th>
+            <th>Variacoes</th>
+            <th>Precos</th>
             <th>Acessos</th>
             <th></th>
           </tr>
@@ -35,16 +37,13 @@
 
         <tbody>
           <tr v-for="p in produtosPaginados" :key="p.id">
-
-            <!-- PRODUTO COM IMAGEM -->
             <td data-label="Produto">
               <div class="produto-cell">
-
-                <!-- IMAGEM -->
                 <div class="preview">
                   <img
                     v-if="p.images && p.images.length"
                     :src="p.images[0]"
+                    :alt="p.name"
                   />
                   <div v-else class="no-image">
                     Sem imagem
@@ -58,35 +57,49 @@
                   </span>
                 </div>
 
-                <!-- TEXTO -->
                 <div class="info">
                   <span class="nome">{{ p.name }}</span>
                   <span class="tipo">{{ p.tipo }}</span>
                 </div>
-
               </div>
             </td>
 
-            <!-- CATEGORIAS -->
             <td data-label="Categorias">
-              <span v-for="c in p.categorias" :key="c" class="chip">
-                {{ c }}
-              </span>
+              <div class="stacked-chips">
+                <span v-for="c in p.categorias" :key="c" class="chip">
+                  {{ c }}
+                </span>
+                <span v-if="!p.categorias.length" class="chip muted-chip">
+                  Sem categoria
+                </span>
+              </div>
             </td>
 
-            <!-- ACESSOS -->
+            <td data-label="Variacoes">
+              <div class="variacoes-cell">
+                <span class="metric">{{ p.variacoes.length }}</span>
+                <span class="variacoes-text">{{ resumoVariacoes(p.variacoes) }}</span>
+              </div>
+            </td>
+
+            <td data-label="Precos">
+              <div class="variacoes-cell compact">
+                <span class="chip muted-chip">{{ contarPrecos(p) }} fixos</span>
+                <span class="chip muted-chip">{{ contarFaixas(p) }} faixas</span>
+              </div>
+            </td>
+
             <td data-label="Acessos">
               <span class="access-count">{{ p.acessos || 0 }}</span>
             </td>
 
-            <!-- AÇÕES -->
-            <td data-label="Ações">
+            <td data-label="Acoes">
               <div class="actions">
                 <button class="edit" @click="editar(p)">Editar</button>
-                <button class="delete" @click="deletar(p.id)">Excluir</button>
+                <button class="duplicate" :disabled="salvando" @click="duplicar(p)">Duplicar</button>
+                <button class="delete" :disabled="salvando" @click="deletar(p)">Excluir</button>
               </div>
             </td>
-
           </tr>
         </tbody>
       </table>
@@ -119,21 +132,55 @@
       </div>
     </div>
 
-    <!-- MODAL -->
     <ModalProdutoVitrine
       v-if="modal"
       :produto="produto"
       :editando="editando"
+      :salvando="salvando"
+      :tipos-disponiveis="tiposDisponiveis"
+      :categorias-disponiveis="categoriasDisponiveis"
       @fechar="fechar"
       @salvar="salvar"
     />
-
   </div>
 </template>
 
 <script>
 import { supabase } from '../services/supabase'
 import ModalProdutoVitrine from '../components/ModalProdutoVitrine.vue'
+
+const TIPOS_PADRAO = [
+  'canecas',
+  'xicaras',
+  'azulejos',
+  'canecas 3d',
+  'bottons',
+]
+
+const CATEGORIAS_PADRAO = [
+  'Futebol',
+  'Capivara',
+  'Frases Engraçadas',
+  'Anime',
+  'Filmes & Series',
+  'Gatos',
+  'Animais',
+  'Norte',
+  'Estados Brasileiros',
+  'Profissoes',
+  'Arte',
+  'Frases Motivacionais',
+  'Fantasia',
+  'Sao Paulo',
+  'Doramas',
+  'Aliens & Ufologia',
+  'Desenhos',
+  'Herois',
+  'Mapa',
+  'Plantas',
+  'Musica',
+  'Envie Sua Arte',
+]
 
 export default {
   components: { ModalProdutoVitrine },
@@ -148,13 +195,10 @@ export default {
       modal: false,
       editando: false,
       produtoId: null,
-
-      produto: {
-        name: '',
-        tipo: '',
-        categorias: [],
-        images: []
-      }
+      carregando: false,
+      salvando: false,
+      erro: '',
+      produto: this.getProdutoVazio(),
     }
   },
 
@@ -163,15 +207,107 @@ export default {
   },
 
   methods: {
-    async buscar() {
-      const campoOrdenacao = this.ordenacao === 'relevantes' ? 'acessos' : 'created_at'
-      const { data } = await supabase
-        .from('products')
-        .select('*')
-        .order(campoOrdenacao, { ascending: false })
+    getProdutoVazio() {
+      return {
+        name: '',
+        tipo: '',
+        categorias: [],
+        images: [],
+        acessos: 0,
+        variacoes: [],
+      }
+    },
 
-      this.produtos = data || []
-      this.ajustarPagina()
+    getVariacaoVazia() {
+      return {
+        nome: '',
+        tipo_variacao: 'cor',
+        ordem: 1,
+        vitrine_precos: [],
+        vitrine_precos_faixas: [],
+      }
+    },
+
+    normalizarProduto(produto = {}) {
+      return {
+        ...this.getProdutoVazio(),
+        id: produto.id || null,
+        name: produto.name || '',
+        tipo: produto.tipo || '',
+        categorias: Array.isArray(produto.categorias) ? [...produto.categorias] : [],
+        images: Array.isArray(produto.images) ? [...produto.images] : [],
+        acessos: Number(produto.acessos) || 0,
+        created_at: produto.created_at || null,
+        variacoes: this.ordenarVariacoes(produto.vitrine_variacoes || produto.variacoes || []),
+      }
+    },
+
+    ordenarVariacoes(variacoes = []) {
+      return [...variacoes]
+        .map((variacao, index) => ({
+          ...this.getVariacaoVazia(),
+          ...variacao,
+          ordem: this.normalizarInteiro(variacao.ordem, index + 1),
+          vitrine_precos: this.ordenarItens(variacao.vitrine_precos, 'preco'),
+          vitrine_precos_faixas: this.ordenarItens(variacao.vitrine_precos_faixas, 'faixa'),
+        }))
+        .sort((a, b) => a.ordem - b.ordem)
+    },
+
+    ordenarItens(itens = [], tipo) {
+      return [...(Array.isArray(itens) ? itens : [])]
+        .map((item, index) => {
+          if (tipo === 'preco') {
+            return {
+              id: item.id || null,
+              preco: this.normalizarNumero(item.preco),
+              ordem: this.normalizarInteiro(item.ordem, index + 1),
+            }
+          }
+
+          return {
+            id: item.id || null,
+            quantidade_minima: this.normalizarInteiro(item.quantidade_minima, 1),
+            quantidade_label: item.quantidade_label || '',
+            preco: this.normalizarNumero(item.preco),
+            destaque: Boolean(item.destaque),
+            ordem: this.normalizarInteiro(item.ordem, index + 1),
+          }
+        })
+        .sort((a, b) => a.ordem - b.ordem)
+    },
+
+    normalizarInteiro(valor, fallback = 0) {
+      const numero = Number.parseInt(valor, 10)
+      return Number.isFinite(numero) ? numero : fallback
+    },
+
+    normalizarNumero(valor, fallback = 0) {
+      const numero = Number.parseFloat(String(valor ?? fallback).replace(',', '.'))
+      return Number.isFinite(numero) ? numero : fallback
+    },
+
+    async buscar() {
+      this.carregando = true
+      this.erro = ''
+
+      try {
+        const campoOrdenacao = this.ordenacao === 'relevantes' ? 'acessos' : 'created_at'
+        const { data, error } = await supabase
+          .from('vitrine')
+          .select('*, vitrine_variacoes(*, vitrine_precos(*), vitrine_precos_faixas(*))')
+          .order(campoOrdenacao, { ascending: false })
+
+        if (error) throw error
+
+        this.produtos = (data || []).map((produto) => this.normalizarProduto(produto))
+        this.ajustarPagina()
+      } catch (error) {
+        console.error(error)
+        this.erro = error.message || 'Nao foi possivel carregar a vitrine.'
+      } finally {
+        this.carregando = false
+      }
     },
 
     abrirNovo() {
@@ -179,55 +315,398 @@ export default {
       this.modal = true
     },
 
-    editar(p) {
-      this.produto = { ...p }
-      this.produtoId = p.id
+    editar(produto) {
+      this.produto = this.normalizarProduto(produto)
+      this.produtoId = produto.id
       this.editando = true
       this.modal = true
     },
 
     fechar() {
+      if (this.salvando) return
+
       this.modal = false
       this.reset()
     },
 
     async salvar(produto) {
-      if (this.editando) {
-        await supabase
-          .from('products')
-          .update(produto)
-          .eq('id', this.produtoId)
-      } else {
-        await supabase
-          .from('products')
-          .insert([produto])
-      }
+      this.salvando = true
 
-      this.fechar()
-      this.buscar()
+      try {
+        const payload = {
+          name: (produto.name || '').trim(),
+          tipo: (produto.tipo || '').trim(),
+          categorias: Array.isArray(produto.categorias)
+            ? produto.categorias.map((categoria) => categoria.trim()).filter(Boolean)
+            : [],
+          images: Array.isArray(produto.images) ? produto.images.filter(Boolean) : [],
+        }
+
+        if (!payload.name || !payload.tipo) {
+          throw new Error('Preencha nome e tipo do produto.')
+        }
+
+        let vitrineId = this.produtoId
+
+        if (this.editando) {
+          const { error } = await supabase
+            .from('vitrine')
+            .update(payload)
+            .eq('id', vitrineId)
+
+          if (error) throw error
+        } else {
+          const { data, error } = await supabase
+            .from('vitrine')
+            .insert([payload])
+            .select('id')
+            .single()
+
+          if (error) throw error
+          vitrineId = data.id
+        }
+
+        await this.sincronizarVariacoes(vitrineId, produto.variacoes || [])
+
+        this.fechar()
+        await this.buscar()
+      } catch (error) {
+        console.error(error)
+        alert(error.message || 'Nao foi possivel salvar o produto da vitrine.')
+      } finally {
+        this.salvando = false
+      }
     },
 
-    async deletar(id) {
-      if (!confirm('Excluir produto?')) return
+    async duplicar(produto) {
+      if (this.salvando) return
 
-      await supabase
-        .from('products')
+      this.salvando = true
+
+      try {
+        const original = this.normalizarProduto(produto)
+        const nomeDuplicado = this.sugerirNomeDuplicado(original.name)
+
+        const payload = {
+          name: nomeDuplicado,
+          tipo: original.tipo,
+          categorias: [...original.categorias],
+          images: [...original.images],
+          acessos: 0,
+        }
+
+        const { data: novoProduto, error } = await supabase
+          .from('vitrine')
+          .insert([payload])
+          .select('id')
+          .single()
+
+        if (error) throw error
+
+        await this.criarVariacoesDuplicadas(novoProduto.id, original.variacoes)
+
+        const { data: recarregado, error: erroFetch } = await supabase
+          .from('vitrine')
+          .select('*, vitrine_variacoes(*, vitrine_precos(*), vitrine_precos_faixas(*))')
+          .eq('id', novoProduto.id)
+          .single()
+
+        if (erroFetch) throw erroFetch
+
+        this.produto = this.normalizarProduto({ ...recarregado, name: nomeDuplicado })
+        this.produtoId = novoProduto.id
+        this.editando = true
+        this.modal = true
+      } catch (error) {
+        console.error(error)
+        alert(error.message || 'Nao foi possivel duplicar o produto.')
+      } finally {
+        this.salvando = false
+      }
+    },
+
+    async sincronizarVariacoes(vitrineId, variacoes) {
+      const variacoesExistentes = Array.isArray(this.produto.variacoes) ? this.produto.variacoes : []
+      const idsExistentes = variacoesExistentes.map((variacao) => variacao.id).filter(Boolean)
+
+      const variacoesNormalizadas = this.ordenarVariacoes(variacoes)
+        .filter((variacao) => variacao.nome?.trim())
+        .map((variacao, index) => ({
+          ...variacao,
+          nome: variacao.nome.trim(),
+          tipo_variacao: (variacao.tipo_variacao || 'cor').trim(),
+          ordem: this.normalizarInteiro(variacao.ordem, index + 1),
+        }))
+
+      const idsRecebidos = variacoesNormalizadas.map((variacao) => variacao.id).filter(Boolean)
+      const idsRemovidos = idsExistentes.filter((id) => !idsRecebidos.includes(id))
+
+      if (idsRemovidos.length) {
+        await this.excluirVariacoes(idsRemovidos)
+      }
+
+      for (const variacao of variacoesNormalizadas) {
+        const payload = {
+          vitrine_id: vitrineId,
+          nome: variacao.nome,
+          tipo_variacao: variacao.tipo_variacao,
+          ordem: variacao.ordem,
+        }
+
+        let variacaoId = variacao.id
+
+        if (variacaoId) {
+          const { error } = await supabase
+            .from('vitrine_variacoes')
+            .update(payload)
+            .eq('id', variacaoId)
+
+          if (error) throw error
+        } else {
+          const { data, error } = await supabase
+            .from('vitrine_variacoes')
+            .insert([payload])
+            .select('id')
+            .single()
+
+          if (error) throw error
+          variacaoId = data.id
+        }
+
+        const variacaoOriginal = variacoesExistentes.find((item) => item.id === variacao.id) || this.getVariacaoVazia()
+
+        await this.sincronizarPrecos(variacaoId, variacao.vitrine_precos || [], variacaoOriginal.vitrine_precos || [])
+        await this.sincronizarFaixas(variacaoId, variacao.vitrine_precos_faixas || [], variacaoOriginal.vitrine_precos_faixas || [])
+      }
+    },
+
+    async criarVariacoesDuplicadas(vitrineId, variacoes = []) {
+      for (const variacao of this.ordenarVariacoes(variacoes)) {
+        const payloadVariacao = {
+          vitrine_id: vitrineId,
+          nome: variacao.nome,
+          tipo_variacao: variacao.tipo_variacao,
+          ordem: variacao.ordem,
+        }
+
+        const { data: novaVariacao, error } = await supabase
+          .from('vitrine_variacoes')
+          .insert([payloadVariacao])
+          .select('id')
+          .single()
+
+        if (error) throw error
+
+        const variacaoId = novaVariacao.id
+
+        const precosPayload = this.ordenarItens(variacao.vitrine_precos, 'preco')
+          .filter((preco) => preco.preco > 0)
+          .map((preco, index) => ({
+            variacao_id: variacaoId,
+            preco: this.normalizarNumero(preco.preco),
+            ordem: this.normalizarInteiro(preco.ordem, index + 1),
+          }))
+
+        if (precosPayload.length) {
+          const { error: erroPrecos } = await supabase
+            .from('vitrine_precos')
+            .insert(precosPayload)
+
+          if (erroPrecos) throw erroPrecos
+        }
+
+        const faixasPayload = this.ordenarItens(variacao.vitrine_precos_faixas, 'faixa')
+          .filter((faixa) => faixa.quantidade_label?.trim() && faixa.preco > 0)
+          .map((faixa, index) => ({
+            variacao_id: variacaoId,
+            quantidade_minima: this.normalizarInteiro(faixa.quantidade_minima, 1),
+            quantidade_label: faixa.quantidade_label.trim(),
+            preco: this.normalizarNumero(faixa.preco),
+            destaque: Boolean(faixa.destaque),
+            ordem: this.normalizarInteiro(faixa.ordem, index + 1),
+          }))
+
+        if (faixasPayload.length) {
+          const { error: erroFaixas } = await supabase
+            .from('vitrine_precos_faixas')
+            .insert(faixasPayload)
+
+          if (erroFaixas) throw erroFaixas
+        }
+      }
+    },
+
+    async sincronizarPrecos(variacaoId, precos, precosExistentes) {
+      const idsExistentes = precosExistentes.map((preco) => preco.id).filter(Boolean)
+      const precosNormalizados = this.ordenarItens(precos, 'preco')
+        .filter((preco) => preco.preco > 0)
+      const idsRecebidos = precosNormalizados.map((preco) => preco.id).filter(Boolean)
+      const idsRemovidos = idsExistentes.filter((id) => !idsRecebidos.includes(id))
+
+      if (idsRemovidos.length) {
+        const { error } = await supabase
+          .from('vitrine_precos')
+          .delete()
+          .in('id', idsRemovidos)
+
+        if (error) throw error
+      }
+
+      for (const [index, preco] of precosNormalizados.entries()) {
+        const payload = {
+          variacao_id: variacaoId,
+          preco: this.normalizarNumero(preco.preco),
+          ordem: this.normalizarInteiro(preco.ordem, index + 1),
+        }
+
+        if (preco.id) {
+          const { error } = await supabase
+            .from('vitrine_precos')
+            .update(payload)
+            .eq('id', preco.id)
+
+          if (error) throw error
+        } else {
+          const { error } = await supabase
+            .from('vitrine_precos')
+            .insert([payload])
+
+          if (error) throw error
+        }
+      }
+    },
+
+    async sincronizarFaixas(variacaoId, faixas, faixasExistentes) {
+      const idsExistentes = faixasExistentes.map((faixa) => faixa.id).filter(Boolean)
+      const faixasNormalizadas = this.ordenarItens(faixas, 'faixa')
+        .filter((faixa) => faixa.quantidade_label?.trim() && faixa.preco > 0)
+        .map((faixa, index) => ({
+          ...faixa,
+          quantidade_label: faixa.quantidade_label.trim(),
+          quantidade_minima: this.normalizarInteiro(faixa.quantidade_minima, 1),
+          ordem: this.normalizarInteiro(faixa.ordem, index + 1),
+        }))
+      const idsRecebidos = faixasNormalizadas.map((faixa) => faixa.id).filter(Boolean)
+      const idsRemovidos = idsExistentes.filter((id) => !idsRecebidos.includes(id))
+
+      if (idsRemovidos.length) {
+        const { error } = await supabase
+          .from('vitrine_precos_faixas')
+          .delete()
+          .in('id', idsRemovidos)
+
+        if (error) throw error
+      }
+
+      for (const faixa of faixasNormalizadas) {
+        const payload = {
+          variacao_id: variacaoId,
+          quantidade_minima: faixa.quantidade_minima,
+          quantidade_label: faixa.quantidade_label,
+          preco: this.normalizarNumero(faixa.preco),
+          destaque: Boolean(faixa.destaque),
+          ordem: faixa.ordem,
+        }
+
+        if (faixa.id) {
+          const { error } = await supabase
+            .from('vitrine_precos_faixas')
+            .update(payload)
+            .eq('id', faixa.id)
+
+          if (error) throw error
+        } else {
+          const { error } = await supabase
+            .from('vitrine_precos_faixas')
+            .insert([payload])
+
+          if (error) throw error
+        }
+      }
+    },
+
+    async deletar(produto) {
+      if (this.salvando || !confirm(`Excluir ${produto.name}?`)) return
+
+      this.salvando = true
+
+      try {
+        const idsVariacoes = (produto.variacoes || []).map((variacao) => variacao.id).filter(Boolean)
+
+        if (idsVariacoes.length) {
+          await this.excluirVariacoes(idsVariacoes)
+        }
+
+        const { error } = await supabase
+          .from('vitrine')
+          .delete()
+          .eq('id', produto.id)
+
+        if (error) throw error
+
+        await this.buscar()
+      } catch (error) {
+        console.error(error)
+        alert(error.message || 'Nao foi possivel excluir o produto da vitrine.')
+      } finally {
+        this.salvando = false
+      }
+    },
+
+    async excluirVariacoes(idsVariacoes) {
+      const { error: erroFaixas } = await supabase
+        .from('vitrine_precos_faixas')
         .delete()
-        .eq('id', id)
+        .in('variacao_id', idsVariacoes)
 
-      this.buscar()
+      if (erroFaixas) throw erroFaixas
+
+      const { error: erroPrecos } = await supabase
+        .from('vitrine_precos')
+        .delete()
+        .in('variacao_id', idsVariacoes)
+
+      if (erroPrecos) throw erroPrecos
+
+      const { error: erroVariacoes } = await supabase
+        .from('vitrine_variacoes')
+        .delete()
+        .in('id', idsVariacoes)
+
+      if (erroVariacoes) throw erroVariacoes
     },
 
     reset() {
       this.editando = false
       this.produtoId = null
+      this.produto = this.getProdutoVazio()
+    },
 
-      this.produto = {
-        name: '',
-        tipo: '',
-        categorias: [],
-        images: []
+    contarPrecos(produto) {
+      return (produto.variacoes || []).reduce((total, variacao) => total + (variacao.vitrine_precos?.length || 0), 0)
+    },
+
+    contarFaixas(produto) {
+      return (produto.variacoes || []).reduce((total, variacao) => total + (variacao.vitrine_precos_faixas?.length || 0), 0)
+    },
+
+    resumoVariacoes(variacoes) {
+      if (!variacoes.length) return 'Sem variacoes cadastradas'
+      return variacoes.slice(0, 3).map((variacao) => variacao.nome).join(', ')
+    },
+
+    sugerirNomeDuplicado(nome) {
+      const base = (nome || 'Produto').trim()
+      const suffix = ' (copia)'
+      let candidato = `${base}${suffix}`
+      let contador = 2
+
+      while (this.produtos.some((produto) => produto.name === candidato)) {
+        candidato = `${base}${suffix} ${contador}`
+        contador += 1
       }
+
+      return candidato
     },
 
     irParaPagina(pagina) {
@@ -238,12 +717,22 @@ export default {
       if (this.paginaAtual > this.totalPaginas) {
         this.paginaAtual = this.totalPaginas
       }
-    }
+    },
   },
 
   computed: {
     totalPaginas() {
       return Math.max(1, Math.ceil(this.produtosFiltrados.length / this.itensPorPagina))
+    },
+
+    tiposDisponiveis() {
+      const dinamicos = this.produtos.map((produto) => produto.tipo).filter(Boolean)
+      return [...new Set([...TIPOS_PADRAO, ...dinamicos])].sort((a, b) => a.localeCompare(b))
+    },
+
+    categoriasDisponiveis() {
+      const dinamicas = this.produtos.flatMap((produto) => produto.categorias || []).filter(Boolean)
+      return [...new Set([...CATEGORIAS_PADRAO, ...dinamicas])].sort((a, b) => a.localeCompare(b))
     },
 
     produtosFiltrados() {
@@ -253,10 +742,15 @@ export default {
 
       return this.produtos.filter((produto) => {
         const categorias = Array.isArray(produto.categorias) ? produto.categorias.join(' ') : ''
+        const variacoes = Array.isArray(produto.variacoes)
+          ? produto.variacoes.map((variacao) => `${variacao.nome} ${variacao.tipo_variacao}`).join(' ')
+          : ''
+
         const conteudo = [
           produto.name,
           produto.tipo,
           categorias,
+          variacoes,
         ]
           .filter(Boolean)
           .join(' ')
@@ -269,7 +763,7 @@ export default {
     produtosPaginados() {
       const inicio = (this.paginaAtual - 1) * this.itensPorPagina
       return this.produtosFiltrados.slice(inicio, inicio + this.itensPorPagina)
-    }
+    },
   },
 
   watch: {
@@ -287,8 +781,8 @@ export default {
 
     ordenacao() {
       this.buscar()
-    }
-  }
+    },
+  },
 }
 </script>
 
@@ -320,10 +814,22 @@ export default {
   margin-bottom: 20px;
 }
 
-.busca {
-  width: 100%;
+.feedback {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
 }
 
+.feedback.erro {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-color: #fecaca;
+}
+
+.busca,
 .ordenacao {
   width: 100%;
 }
@@ -356,6 +862,7 @@ th {
 td {
   padding: 14px 16px;
   border-bottom: 1px solid var(--border);
+  vertical-align: top;
 }
 
 .produto-cell {
@@ -414,49 +921,56 @@ td {
   color: var(--text-muted);
 }
 
-.chip {
-  display: inline-flex;
+.stacked-chips,
+.variacoes-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   align-items: center;
-  background: var(--surface-muted);
-  padding: 5px 10px;
-  border-radius: 999px;
-  margin-right: 4px;
-  color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 600;
 }
 
+.variacoes-cell {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.variacoes-cell.compact {
+  gap: 8px;
+}
+
+.variacoes-text {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.metric,
+.chip,
 .access-count {
   display: inline-flex;
   align-items: center;
-  background: var(--info-soft);
   padding: 5px 10px;
   border-radius: 999px;
-  color: var(--info);
   font-size: 12px;
   font-weight: 600;
 }
 
-.ativo {
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 10px;
-  border-radius: 999px;
-  color: var(--success);
-  background: var(--success-soft);
-  font-weight: 700;
-  font-size: 12px;
+.metric {
+  background: var(--surface-soft);
+  color: var(--text);
 }
 
-.inativo {
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 10px;
-  border-radius: 999px;
-  color: var(--danger);
-  background: var(--danger-soft);
-  font-size: 12px;
-  font-weight: 700;
+.chip {
+  background: var(--surface-muted);
+  color: var(--text-muted);
+}
+
+.muted-chip {
+  background: var(--surface-soft);
+}
+
+.access-count {
+  background: var(--info-soft);
+  color: var(--info);
 }
 
 button {
@@ -465,6 +979,11 @@ button {
   border-radius: 12px;
   cursor: pointer;
   font-weight: 600;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .primary {
@@ -479,6 +998,12 @@ button {
   border-color: #bfdbfe;
 }
 
+.duplicate {
+  background: #fefce8;
+  color: #854d0e;
+  border-color: #fef08a;
+}
+
 .delete {
   background: var(--danger-soft);
   color: var(--danger);
@@ -487,6 +1012,10 @@ button {
 
 .edit:hover {
   background: #dbeafe;
+}
+
+.duplicate:hover {
+  background: #fef3c7;
 }
 
 .delete:hover {
@@ -548,11 +1077,6 @@ button {
   color: var(--text);
 }
 
-.pagination-actions button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
 tr:hover {
   background: rgba(248, 250, 252, 0.9);
 }
@@ -573,6 +1097,10 @@ tr:hover {
 
   .primary {
     width: 100%;
+  }
+
+  .filtros {
+    grid-template-columns: 1fr;
   }
 
   table,
@@ -629,16 +1157,13 @@ tr:hover {
     justify-content: space-between;
   }
 
-  .pagination-select select {
+  .pagination-select select,
+  .pagination-actions button {
     width: 100%;
   }
 
   .pagination-actions {
     width: 100%;
-  }
-
-  .pagination-actions button {
-    flex: 1;
   }
 }
 </style>
