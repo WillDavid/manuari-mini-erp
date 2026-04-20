@@ -3,7 +3,6 @@ import ProdutosView from '../views/ProdutosView.vue'
 import VendasView from '../views/VendasView.vue'
 import EstoqueView from '../views/EstoqueView.vue'
 import VitrineView from '../views/VitrineView.vue'
-import FinanceiroView from '../views/FinanceiroView.vue'
 import UserIdentifier from '../components/UserIdentifier.vue'
 
 const routes = [
@@ -12,8 +11,7 @@ const routes = [
   { path: '/produtos', component: ProdutosView, meta: { requiresAuth: true } },
   { path: '/vendas', component: VendasView, meta: { requiresAuth: true } },
   { path: '/estoque', component: EstoqueView, meta: { requiresAuth: true } },
-  { path: '/vitrine', component: VitrineView, meta: { requiresAuth: true } },
-  { path: '/financeiro', component: FinanceiroView, meta: { requiresAuth: true } }
+  { path: '/vitrine', component: VitrineView, meta: { requiresAuth: true } }
 ]
 
 const router = createRouter({

@@ -128,7 +128,6 @@
 
 <script>
 import { supabase } from '../services/supabase'
-import { criarContasReceberDaVenda, deletarContaReceber, calcularParcelas } from '../services/financeiro'
 import ModalVenda from '../components/ModalVenda.vue'
 
 export default {
@@ -257,11 +256,7 @@ export default {
       total_bruto: venda.total_bruto,
       desconto: venda.desconto,
       total_final: venda.total_final,
-      forma_pagamento: venda.forma_pagamento,
-      parcelas: venda.forma_pagamento === 'credito' ? (venda.parcelas || 1) : 1,
-      valor_parcela: venda.forma_pagamento === 'credito' 
-        ? calcularParcelas(venda.total_final, venda.parcelas || 1).valorParcela 
-        : venda.total_final
+      forma_pagamento: venda.forma_pagamento
     }
 
     let vendaSalva
@@ -378,21 +373,11 @@ export default {
     this.fecharModal()
     this.buscarVendas()
 
-    await this.gerarContaFinanceiro(vendaSalva, venda)
-
   } catch (error) {
     console.error(error)
     alert('Erro ao salvar venda')
   } finally {
     this.isLoading = false
-  }
-},
-
-async gerarContaFinanceiro(venda, dadosVenda) {
-  try {
-    await criarContasReceberDaVenda(venda)
-  } catch (error) {
-    console.error('Erro ao gerar conta financeira:', error)
   }
 },
 

@@ -10,10 +10,6 @@
           Vendas
         </router-link>
 
-        <router-link to="/financeiro" class="link" active-class="active" @click="fecharMenus">
-          Financeiro
-        </router-link>
-
         <router-link to="/estoque" class="link" active-class="active" @click="fecharMenus">
           Estoque
         </router-link>
