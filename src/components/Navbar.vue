@@ -21,6 +21,10 @@
         <router-link to="/vitrine" class="link" active-class="active" @click="fecharMenus">
           Vitrine
         </router-link>
+
+        <router-link to="/vitrine/insights" class="link" active-class="active" @click="fecharMenus">
+          Insights
+        </router-link>
       </nav>
 
       <div class="actions">

@@ -2,9 +2,14 @@
   <div class="page">
     <div class="header">
       <h3>Vitrine</h3>
-      <button class="primary" @click="abrirNovo">
-        Novo Produto
-      </button>
+      <div class="header-actions">
+        <router-link to="/vitrine/insights" class="btn-secondary">
+          📊 Insights
+        </router-link>
+        <button class="primary" @click="abrirNovo">
+          Novo Produto
+        </button>
+      </div>
     </div>
 
     <div class="filtros">
@@ -95,6 +100,7 @@
 
             <td data-label="Acoes">
               <div class="actions">
+                <button class="view" @click="verDetalhes(p)">Ver</button>
                 <button class="edit" @click="editar(p)">Editar</button>
                 <button class="duplicate" :disabled="salvando" @click="duplicar(p)">Duplicar</button>
                 <button class="delete" :disabled="salvando" @click="deletar(p)">Excluir</button>
@@ -320,6 +326,10 @@ export default {
       this.produtoId = produto.id
       this.editando = true
       this.modal = true
+    },
+
+    verDetalhes(produto) {
+      this.$router.push(`/vitrine/detalhes/${produto.id}`)
     },
 
     fechar() {
@@ -801,6 +811,22 @@ export default {
   margin-bottom: 20px;
 }
 
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-secondary {
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+}
+
 .header h3 {
   font-size: 28px;
   font-weight: 700;
@@ -998,6 +1024,12 @@ button:disabled {
   border-color: #bfdbfe;
 }
 
+.view {
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: #bbf7d0;
+}
+
 .duplicate {
   background: #fefce8;
   color: #854d0e;
@@ -1012,6 +1044,10 @@ button:disabled {
 
 .edit:hover {
   background: #dbeafe;
+}
+
+.view:hover {
+  background: #dcfce7;
 }
 
 .duplicate:hover {
@@ -1089,6 +1125,11 @@ tr:hover {
   .header {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .header h3 {
