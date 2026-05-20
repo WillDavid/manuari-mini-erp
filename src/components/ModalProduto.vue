@@ -1,14 +1,17 @@
 <template>
-  <div class="modal-overlay">
-    <div class="modal">
+  <div class="modal-overlay" @click.self="$emit('fechar')">
+    <div class="modal" role="dialog" aria-modal="true">
 
       <div class="modal-header">
-        <h2>{{ editando ? 'Editar Produto' : 'Novo Produto' }}</h2>
-        <button class="close" @click="$emit('fechar')">×</button>
+        <h2 class="modal-title">{{ editando ? 'Editar Produto' : 'Novo Produto' }}</h2>
+        <button class="close-btn" @click="$emit('fechar')" aria-label="Fechar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
       </div>
 
-      <form @submit.prevent="submit">
-
+      <form class="modal-body" @submit.prevent="submit">
         <div class="field">
           <label>Nome do Produto</label>
           <input v-model="localProduto.nome" required />
@@ -19,12 +22,11 @@
           <input v-model="localProduto.codigo" />
         </div>
 
-        <div class="row">
+        <div class="form-row">
           <div class="field">
             <label>Preço Custo (R$)</label>
             <input v-model="localProduto.preco_custo" />
           </div>
-
           <div class="field">
             <label>Preço de Venda (R$)</label>
             <input v-model="localProduto.preco_venda" required />
@@ -36,22 +38,19 @@
           <input type="number" v-model.number="localProduto.estoque" />
         </div>
 
-        <div class="checkbox">
-          <input type="checkbox" v-model="localProduto.ativo" />
-          <label>Produto ativo</label>
+        <div class="checkbox-row">
+          <input type="checkbox" v-model="localProduto.ativo" id="ativo-check" />
+          <label for="ativo-check">Produto ativo</label>
         </div>
-
-        <div class="actions">
-          <button class="primary" type="submit" :disabled="isLoading">
-            {{ isLoading ? 'Processando...' : editando ? 'Atualizar' : 'Salvar' }}
-          </button>
-
-          <button class="secondary" type="button" @click="$emit('fechar')" :disabled="isLoading">
-            Cancelar
-          </button>
-        </div>
-
       </form>
+
+      <div class="modal-footer">
+        <button class="btn btn-primary" type="submit" :disabled="isLoading" @click="submit">
+          {{ isLoading ? 'Processando...' : editando ? 'Atualizar' : 'Salvar' }}
+        </button>
+        <button class="btn btn-ghost" type="button" @click="$emit('fechar')" :disabled="isLoading">Cancelar</button>
+      </div>
+
     </div>
   </div>
 </template>
@@ -59,40 +58,21 @@
 <script>
 export default {
   props: ['produto', 'editando'],
-
-  data() {
-    return {
-      isLoading: false,
-      localProduto: { ...this.produto }
-    }
-  },
-
+  data() { return { isLoading: false, localProduto: { ...this.produto } } },
   methods: {
-    parseMoney(value) {
-      if (!value) return 0
-      return parseFloat(
-        value.toString().replace(',', '.')
-      ) || 0
-    },
-
+    parseMoney(value) { if (!value) return 0; return parseFloat(value.toString().replace(',', '.')) || 0 },
     async submit() {
       if (this.isLoading) return
-
       this.isLoading = true
-
       try {
         const produtoTratado = {
           ...this.localProduto,
           preco_custo: this.parseMoney(this.localProduto.preco_custo),
           preco_venda: this.parseMoney(this.localProduto.preco_venda)
         }
-
         this.$emit('salvar', produtoTratado)
-      } catch (error) {
-        console.error('Erro ao salvar produto:', error)
-      } finally {
-        this.isLoading = false
-      }
+      } catch (error) { console.error('Erro ao salvar produto:', error) }
+      finally { this.isLoading = false }
     }
   }
 }
@@ -100,143 +80,75 @@ export default {
 
 <style scoped>
 .modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 2000;
-  background: rgba(15, 23, 42, 0.52);
-  backdrop-filter: blur(6px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(15, 23, 42, 0.48);
+  display: flex; align-items: center; justify-content: center;
   padding: 16px;
 }
 
 .modal {
   background: var(--surface);
-  width: 100%;
-  max-width: 480px;
+  width: 100%; max-width: 420px;
   border-radius: var(--radius-md);
-  padding: 24px;
-  max-height: 90vh;
-  overflow-y: auto;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1px solid var(--border);
   box-shadow: var(--shadow-md);
+  max-height: calc(100vh - 32px);
+  display: flex; flex-direction: column;
+  overflow: hidden;
 }
 
 .modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 18px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0; gap: 12px;
 }
 
-.modal-header h2 {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
+.modal-title { font-size: 18px; font-weight: 600; margin: 0; color: var(--text); }
 
-.close {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--surface-soft);
-  color: var(--text-muted);
-  font-size: 20px;
-  cursor: pointer;
+.close-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; flex-shrink: 0;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface-soft); color: var(--text-muted);
+  cursor: pointer; transition: all 0.15s;
 }
+.close-btn:hover { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 14px;
-}
+.modal-body { padding: 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px; }
 
-.field label {
-  font-size: 13px;
-  margin-bottom: 6px;
-  color: var(--text-muted);
-  font-weight: 600;
-}
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.field input { font-size: 13px; }
 
-.row {
-  display: flex;
-  gap: 12px;
-}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
-input {
-  background: var(--surface);
+.checkbox-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; background: var(--surface-soft);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
 }
+.checkbox-row input { width: 16px; height: 16px; min-height: auto; flex-shrink: 0; }
+.checkbox-row label { color: var(--text); font-weight: 500; font-size: 13px; cursor: pointer; }
 
-.checkbox {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-  padding: 12px 14px;
-  background: var(--surface-soft);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-}
+.modal-footer { display: flex; gap: 8px; padding: 16px 20px; border-top: 1px solid var(--border); flex-shrink: 0; }
 
-.checkbox input {
-  width: 18px;
-  min-height: auto;
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0 16px; height: 36px;
+  border-radius: var(--radius-sm); border: 1px solid var(--border);
+  cursor: pointer; font-weight: 600; font-size: 13px;
+  transition: all 0.15s; white-space: nowrap;
 }
-
-.checkbox label {
-  color: var(--text);
-  font-weight: 600;
-}
-
-.actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-button {
-  border: 1px solid transparent;
-  padding: 10px 14px;
-  border-radius: 12px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.primary {
-  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-  color: white;
-  box-shadow: 0 10px 24px rgba(249, 115, 22, 0.22);
-}
-
-.secondary {
-  background: var(--surface-soft);
-  border-color: var(--border);
-  color: var(--text);
-}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary { background: var(--primary); color: white; border-color: var(--primary); }
+.btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+.btn-ghost { background: var(--surface); color: var(--text); }
+.btn-ghost:hover:not(:disabled) { background: var(--surface-soft); }
 
 @media (max-width: 600px) {
-  .modal {
-    padding: 16px;
-    border-radius: 14px;
-  }
-
-  .row {
-    flex-direction: column;
-  }
-
-  .actions {
-    flex-direction: column;
-  }
-
-  .actions button {
-    width: 100%;
-  }
-
-  input {
-    font-size: 16px;
-  }
+  .form-row { grid-template-columns: 1fr; }
+  .modal-footer { flex-direction: column; }
+  .modal-footer .btn { width: 100%; }
+  input { font-size: 15px; }
 }
 </style>

@@ -65,7 +65,7 @@ data() {
 
       try {
         await new Promise(resolve => setTimeout(resolve, 300))
-        
+
         const expiresAt = Date.now() + (DIAS_LOGADO * 24 * 60 * 60 * 1000)
         localStorage.setItem('authExpires', expiresAt.toString())
         this.$router.push('/vendas')
@@ -94,73 +94,76 @@ data() {
 .identify-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 40px;
-  max-width: 400px;
+  border-radius: var(--radius-md);
+  padding: 32px;
+  max-width: 380px;
   width: 100%;
   text-align: center;
   box-shadow: var(--shadow-md);
 }
 
 .logo {
-  height: 48px;
+  height: 42px;
   object-fit: contain;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 h1 {
-  font-size: 28px;
-  font-weight: 700;
-  margin-bottom: 8px;
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text);
 }
 
 p {
   color: var(--text-muted);
-  font-size: 14px;
-  margin-bottom: 24px;
+  font-size: 13px;
+  margin-bottom: 20px;
 }
 
 form {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 
 .input {
   text-align: center;
-  font-size: 16px;
+  font-size: 14px;
+  height: 42px;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  background: var(--primary);
   color: white;
-  border: none;
-  padding: 12px 20px;
+  border: 1px solid var(--primary);
+  padding: 0 20px;
+  height: 42px;
   border-radius: var(--radius-sm);
   font-weight: 600;
-  font-size: 15px;
+  font-size: 14px;
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(249, 115, 22, 0.22);
-  transition: transform 0.2s;
+  transition: background 0.15s;
 }
 
-.btn-primary:hover {
-  transform: translateY(-1px);
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .erro {
   color: var(--danger);
-  font-size: 13px;
-  margin-top: 10px;
+  font-size: 12px;
+  margin-top: 8px;
 }
 
 @media (max-width: 480px) {
   .identify-card {
-    padding: 28px 20px;
-  }
-
-  h1 {
-    font-size: 24px;
+    padding: 24px 20px;
   }
 }
 </style>

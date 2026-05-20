@@ -44,9 +44,11 @@
                     {{ p.ativo ? 'Ativo' : 'Inativo' }}
                 </span>
                 </td>
-                <td data-label="Ações" class="actions">
-                <button class="edit" @click="editarProduto(p)">Editar</button>
-                <button class="delete" @click="deletarProduto(p.id)">Excluir</button>
+                <td class="actions-cell">
+                  <div class="actions-wrap">
+                    <button class="edit" @click="editarProduto(p)">Editar</button>
+                    <button class="delete" @click="deletarProduto(p.id)">Excluir</button>
+                  </div>
                 </td>
             </tr>
         </tbody>
@@ -284,7 +286,7 @@ export default {
 
 <style scoped>
 .page {
-  padding: 32px 20px 40px;
+  padding: 20px 20px 32px;
   max-width: 1520px;
   margin: 0 auto;
 }
@@ -293,21 +295,22 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
 .header h3 {
-  font-size: 28px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 600;
   letter-spacing: -0.02em;
+  margin-bottom: 0;
 }
 
 .filtros {
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 .busca {
@@ -317,9 +320,8 @@ export default {
 .table-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   overflow-x: auto;
-  box-shadow: var(--shadow-sm);
   margin-bottom: 18px;
 }
 
@@ -329,19 +331,37 @@ table {
   font-size: 14px;
 }
 
-th {
-  background: var(--surface-soft);
+thead th {
+  background: #F1F5F9;
   text-align: left;
-  padding: 14px 16px;
+  padding: 8px 14px;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  position: sticky;
+  top: 0;
+}
+
+tbody tr {
+  height: 42px;
+}
+
+tbody tr:nth-child(even) {
+  background: rgba(241, 245, 249, 0.6);
+}
+
+tbody tr:hover {
+  background: rgba(232, 110, 26, 0.04);
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
 }
 
 td {
-  padding: 14px 16px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--border);
   color: var(--text);
 }
@@ -355,16 +375,25 @@ button {
 }
 
 .primary {
-  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
   color: white;
-  box-shadow: 0 10px 24px rgba(249, 115, 22, 0.22);
 }
 
 .edit {
-  background: #eff6ff;
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
   color: var(--info);
-  border-color: #bfdbfe;
-  margin-right: 6px;
+  margin-right: 0;
 }
 
 .edit:hover {
@@ -372,27 +401,28 @@ button {
 }
 
 .delete {
-  background: var(--danger-soft);
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
   color: var(--danger);
-  border-color: #fecaca;
 }
 
 .delete:hover {
   background: #fee2e2;
 }
 
-.primary:hover {
-  transform: translateY(-1px);
-}
-
 .ativo,
 .inativo {
   display: inline-flex;
   align-items: center;
-  padding: 5px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .ativo {
@@ -407,7 +437,29 @@ button {
 
 .actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+}
+
+.actions-cell {
+  width: 1%;
+  white-space: nowrap;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.actions-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  line-height: 1;
+}
+
+.actions-wrap button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .pagination {
@@ -415,6 +467,7 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  font-size: 12px;
 }
 
 .pagination-meta {
@@ -429,7 +482,7 @@ button {
   align-items: center;
   gap: 10px;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -440,7 +493,7 @@ button {
 
 .pagination-info {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -460,98 +513,41 @@ button {
   cursor: not-allowed;
 }
 
-tbody tr:hover {
-  background: rgba(248, 250, 252, 0.9);
-}
-
-tbody tr:last-child td {
-  border-bottom: none;
-}
-
 @media (max-width: 768px) {
-  .page {
-    padding: 24px 12px 32px;
-  }
-
-  .header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .header h3 {
-    font-size: 24px;
-  }
-
-  .primary {
-    width: 100%;
-  }
-
-  table,
-  thead,
-  tbody,
-  th,
-  td,
-  tr {
-    display: block;
-  }
-
-  thead {
-    display: none;
-  }
-
+  .page { padding: 16px 12px 24px; }
+  .header { flex-direction: column; align-items: stretch; }
+  .header h3 { font-size: 20px; }
+  .primary { width: 100%; }
+  table, thead, tbody, th, td, tr { display: block; }
+  thead { display: none; }
   tr {
     background: var(--surface);
-    margin-bottom: 12px;
-    border: 1px solid var(--border);
-    border-radius: 18px;
+    margin-bottom: 10px;
+    border-radius: var(--radius-md);
     padding: 12px;
-    box-shadow: none;
+    border: 1px solid var(--border);
   }
-
   td {
     display: flex;
     justify-content: space-between;
-    gap: 16px;
-    padding: 10px 4px;
+    gap: 12px;
+    padding: 8px 4px;
     border: none;
     font-size: 13px;
   }
-
   td::before {
     content: attr(data-label);
-    font-weight: 700;
+    font-weight: 600;
     color: var(--text-muted);
+    font-size: 11px;
   }
-
-  .actions {
-    justify-content: flex-end;
-    flex-wrap: wrap;
-  }
-
-  .pagination {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .pagination-meta {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .pagination-select {
-    justify-content: space-between;
-  }
-
-  .pagination-select select {
-    width: 100%;
-  }
-
-  .pagination-actions {
-    width: 100%;
-  }
-
-  .pagination-actions button {
-    flex: 1;
-  }
+  .actions-wrap { justify-content: flex-end; flex-wrap: wrap; }
+  .pagination { flex-direction: column; align-items: stretch; gap: 10px; }
+  .pagination-meta { flex-direction: column; align-items: stretch; gap: 10px; }
+  .pagination-select { justify-content: space-between; }
+  .pagination-select select { width: 100%; height: 36px; }
+  .pagination-actions { width: 100%; }
+  .pagination-actions button { flex: 1; height: 32px; }
+  .pagination-actions button:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 </style>

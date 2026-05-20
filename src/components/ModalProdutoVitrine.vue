@@ -1,9 +1,13 @@
 <template>
-  <div class="overlay">
-    <div class="modal">
+  <div class="modal-overlay">
+    <div class="modal" role="dialog" aria-modal="true">
       <div class="modal-header">
-        <h3>{{ editando ? 'Editar Produto' : 'Novo Produto' }}</h3>
-        <button class="close" :disabled="salvando" @click="$emit('fechar')">✕</button>
+        <h3 class="modal-title">{{ editando ? 'Editar Produto' : 'Novo Produto' }}</h3>
+        <button class="close-btn" :disabled="salvando" @click="$emit('fechar')" aria-label="Fechar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
       </div>
 
       <div class="modal-body">
@@ -470,15 +474,10 @@ export default {
 </script>
 
 <style scoped>
-.overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 2000;
-  background: rgba(15, 23, 42, 0.52);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  backdrop-filter: blur(6px);
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(15, 23, 42, 0.48);
+  display: flex; justify-content: center; align-items: center;
   padding: 16px;
 }
 
@@ -488,51 +487,44 @@ export default {
   max-height: calc(100vh - 32px);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1px solid var(--border);
   overflow: hidden;
   animation: fadeIn 0.2s ease;
-  display: flex;
-  flex-direction: column;
+  display: flex; flex-direction: column;
 }
 
 .modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 18px 20px;
-  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0; gap: 12px;
 }
 
-.modal-header h3 {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
+.modal-title { font-size: 18px; font-weight: 600; margin: 0; color: var(--text); }
 
-.close {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  background: var(--surface-soft);
-  border: 1px solid var(--border);
-  font-size: 18px;
-  cursor: pointer;
-  color: var(--text-muted);
+.close-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; flex-shrink: 0;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface-soft); color: var(--text-muted);
+  cursor: pointer; transition: all 0.15s;
 }
+.close-btn:hover { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
+.close-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .modal-body {
   padding: 20px;
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
-  gap: 24px;
+  gap: 20px;
   overflow-y: auto;
+  flex: 1;
 }
 
 .coluna-esquerda,
 .coluna-direita {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .sticky-panel {
@@ -543,11 +535,11 @@ export default {
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .form-group.compact {
-  gap: 6px;
+  gap: 4px;
 }
 
 .full-width {
@@ -555,19 +547,21 @@ export default {
 }
 
 label {
-  font-size: 13px;
+  font-size: 11px;
   color: var(--text-muted);
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 input,
 select {
-  background: var(--surface);
+  font-size: 13px;
 }
 
 .inline-inputs {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   align-items: end;
 }
 
@@ -698,37 +692,52 @@ select {
 }
 
 .btn {
-  padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid transparent;
+  padding: 0 12px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
   cursor: pointer;
   font-weight: 600;
+  font-size: 12px;
+  transition: all 0.15s;
 }
 
 .btn.small {
-  padding: 9px 12px;
+  padding: 0 10px;
   font-size: 12px;
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  background: var(--primary);
   color: white;
-  box-shadow: 0 10px 24px rgba(249, 115, 22, 0.22);
+  border-color: var(--primary);
+}
+
+.btn.primary:hover {
+  background: var(--primary-hover);
 }
 
 .btn.ghost {
   background: var(--surface);
-  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+.btn.ghost:hover {
+  background: var(--surface-soft);
+  color: var(--text);
 }
 
 .btn.danger {
-  background: var(--danger-soft);
+  background: var(--surface);
   color: var(--danger);
-  border-color: #fecaca;
+  border-color: var(--border);
 }
 
-.btn:disabled,
-.close:disabled {
+.btn.danger:hover {
+  background: var(--danger-soft);
+}
+
+.btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
@@ -737,7 +746,6 @@ select {
   .modal-body {
     grid-template-columns: 1fr;
   }
-
   .sticky-panel {
     position: static;
   }
@@ -747,41 +755,23 @@ select {
   .modal {
     width: 100%;
   }
-
-  .inline-inputs.grow,
-  .inline-inputs.double,
-  .inline-inputs.triple,
-  .inline-inputs.nested-row,
-  .modal-footer,
-  .section-header {
+  .inline-inputs.grow, .inline-inputs.double, .inline-inputs.triple, .inline-inputs.nested-row, .modal-footer, .section-header {
     grid-template-columns: 1fr;
     flex-direction: column;
   }
-
   .small-field {
     max-width: none;
   }
-
-  .btn,
-  .close {
+  .btn {
     width: 100%;
   }
-
-  .variation-header .btn,
-  .section-header .btn {
+  .variation-header .btn, .section-header .btn {
     width: auto;
   }
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>

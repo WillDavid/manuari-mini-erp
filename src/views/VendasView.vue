@@ -72,14 +72,15 @@
               {{ v.forma_pagamento || '-' }}
             </td>
 
-            <td data-label="Ações" class="actions">
-              <button class="edit" @click="editarVenda(v)">
-                Editar
-              </button>
-
-              <button class="delete" @click="excluirVenda(v.id)">
-                Excluir
-              </button>
+            <td class="actions-cell">
+              <div class="actions-wrap">
+                <button class="edit" @click="editarVenda(v)">
+                  Editar
+                </button>
+                <button class="delete" @click="excluirVenda(v.id)">
+                  Excluir
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -539,7 +540,7 @@ export default {
 
 <style scoped>
 .page {
-  padding: 32px 20px 40px;
+  padding: 20px 20px 32px;
   max-width: 1520px;
   margin: 0 auto;
 }
@@ -548,125 +549,136 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
 .header h3 {
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .table-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   overflow-x: auto;
-  box-shadow: var(--shadow-sm);
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 13px;
 }
 
-th {
-  background: var(--surface-soft);
+thead th {
+  background: #F1F5F9;
   text-align: left;
-  padding: 14px 16px;
+  padding: 8px 14px;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
-td {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
+tbody tr {
+  height: 40px;
 }
 
-button {
-  border: 1px solid transparent;
-  padding: 9px 14px;
-  border-radius: 12px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.primary {
-  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-  color: white;
-  box-shadow: 0 10px 24px rgba(249, 115, 22, 0.22);
-}
-
-.edit {
-  background: #eff6ff;
-  color: var(--info);
-  border-color: #bfdbfe;
-}
-
-.delete {
-  background: var(--danger-soft);
-  color: var(--danger);
-  border-color: #fecaca;
-}
-
-.edit:hover {
-  background: #dbeafe;
-}
-
-.delete:hover {
-  background: #fee2e2;
-}
-
-.primary:hover {
-  transform: translateY(-1px);
-}
-
-.actions {
-  display: flex;
-  gap: 8px;
+tbody tr:nth-child(even) {
+  background: rgba(241,245,249,0.55);
 }
 
 tbody tr:hover {
-  background: rgba(248, 250, 252, 0.9);
+  background: rgba(232,110,26,0.04);
 }
 
 tbody tr:last-child td {
   border-bottom: none;
 }
 
+td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+button {
+  border: 1px solid var(--border);
+  height: 30px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 12px;
+  background: var(--surface);
+  color: var(--text);
+  transition: all 0.15s;
+}
+
+button:hover {
+  background: var(--surface-soft);
+}
+
+.primary {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.primary:hover {
+  background: var(--primary-hover);
+}
+
+.edit { color: var(--info); }
+.edit:hover { background: var(--info-soft); }
+
+.delete { color: var(--danger); }
+.delete:hover { background: var(--danger-soft); }
+
+.actions-cell {
+  width: 1%;
+  white-space: nowrap;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.actions-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  line-height: 1;
+}
+
+.actions-wrap button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 .filtros {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
-.busca {
-  width: 100%;
-}
+.busca { width: 100%; }
 
 .filtro-data {
   display: flex;
   gap: 8px;
 }
 
-.filtro-data input {
-  width: 100%;
-}
-
-.input {
-  min-width: 150px;
-}
-
-.actions-cell {
-  white-space: nowrap;
-}
+.filtro-data input { width: 100%; }
 
 .pagination {
   display: flex;
@@ -685,142 +697,74 @@ tbody tr:last-child td {
 .pagination-select {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .pagination-select select {
   width: auto;
-  min-width: 86px;
+  min-width: 80px;
+  height: 32px;
 }
 
 .pagination-info {
   color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .pagination-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .pagination-actions button {
-  background: var(--surface);
-  border-color: var(--border);
-  color: var(--text);
+  height: 32px;
+  padding: 0 12px;
 }
 
 .pagination-actions button:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 @media (max-width: 768px) {
-  .page {
-    padding: 24px 12px 32px;
-  }
-
-  .filtros {
-    grid-template-columns: 1fr;
-  }
-
-  .header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .header h3 {
-    font-size: 24px;
-  }
-
-  .primary {
-    width: 100%;
-  }
-
-  table,
-  thead,
-  tbody,
-  th,
-  td,
-  tr {
-    display: block;
-  }
-
-  thead {
-    display: none;
-  }
-
+  .page { padding: 16px 12px 24px; }
+  .filtros { grid-template-columns: 1fr; }
+  .header { flex-direction: column; align-items: stretch; }
+  .header h3 { font-size: 20px; }
+  .primary { width: 100%; height: 36px; }
+  table, thead, tbody, th, td, tr { display: block; }
+  thead { display: none; }
   tr {
     background: var(--surface);
-    margin-bottom: 12px;
-    border-radius: 18px;
+    margin-bottom: 10px;
+    border-radius: var(--radius-md);
     padding: 12px;
     border: 1px solid var(--border);
-    box-shadow: none;
   }
-
   td {
     display: flex;
     justify-content: space-between;
-    gap: 16px;
-    padding: 10px 4px;
+    gap: 12px;
+    padding: 8px 4px;
     border: none;
     font-size: 13px;
   }
-
   td::before {
     content: attr(data-label);
-    font-weight: 700;
+    font-weight: 600;
     color: var(--text-muted);
+    font-size: 11px;
   }
-
-  .actions {
-    justify-content: flex-end;
-    flex-wrap: wrap;
-  }
-
-  td[data-label="Produtos"] {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  td[data-label="Produtos"] > div {
-    width: 100%;
-    text-align: right;
-    background: var(--surface-soft);
-    padding: 8px 10px;
-    border-radius: 10px;
-    font-size: 12px;
-  }
-
-  .pagination {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .pagination-meta {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .pagination-select {
-    justify-content: space-between;
-  }
-
-  .pagination-select select {
-    width: 100%;
-  }
-
-  .pagination-actions {
-    width: 100%;
-  }
-
-  .pagination-actions button {
-    flex: 1;
-  }
+  .actions-wrap { justify-content: flex-end; flex-wrap: wrap; }
+  .pagination { flex-direction: column; align-items: stretch; }
+  .pagination-meta { flex-direction: column; align-items: stretch; }
+  .pagination-select { justify-content: space-between; }
+  .pagination-select select { width: 100%; }
+  .pagination-actions { width: 100%; }
+  .pagination-actions button { flex: 1; }
 }
 </style>

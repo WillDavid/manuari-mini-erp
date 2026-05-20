@@ -42,14 +42,15 @@
               </span>
             </td>
 
-            <td data-label="Ações" class="actions">
-              <button class="entrada" @click="abrirMovimentacao(p, 'entrada')">
-                Entrada
-              </button>
-
-              <button class="saida" @click="abrirMovimentacao(p, 'saida')">
-                Saída
-              </button>
+            <td class="actions-cell">
+              <div class="actions-wrap">
+                <button class="entrada" @click="abrirMovimentacao(p, 'entrada')">
+                  Entrada
+                </button>
+                <button class="saida" @click="abrirMovimentacao(p, 'saida')">
+                  Saída
+                </button>
+              </div>
             </td>
 
           </tr>
@@ -253,18 +254,18 @@ export default {
 
 <style scoped>
 .page {
-  padding: 32px 20px 40px;
+  padding: 20px 20px 32px;
   max-width: 1520px;
   margin: 0 auto;
 }
 
 .header {
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 .header h3 {
-  font-size: 28px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
   letter-spacing: -0.02em;
 }
 
@@ -272,7 +273,7 @@ export default {
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 .busca {
@@ -282,9 +283,8 @@ export default {
 .table-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   overflow-x: auto;
-  box-shadow: var(--shadow-sm);
   margin-bottom: 18px;
 }
 
@@ -293,20 +293,39 @@ table {
   border-collapse: collapse;
 }
 
-th {
-  background: var(--surface-soft);
-  padding: 14px 16px;
+thead th {
+  background: #F1F5F9;
+  padding: 8px 14px;
   text-align: left;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
-td {
-  padding: 14px 16px;
+tbody tr {
+  height: 40px;
+}
+
+tbody tr td {
+  padding: 10px 14px;
   border-bottom: 1px solid var(--border);
+}
+
+tbody tr:nth-child(even) {
+  background: rgba(241, 245, 249, 0.6);
+}
+
+tbody tr:hover {
+  background: rgba(232, 110, 26, 0.04);
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
 }
 
 button {
@@ -317,24 +336,42 @@ button {
   font-weight: 600;
 }
 
+.entrada,
+.saida {
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
 .entrada {
-  background: var(--success-soft);
   color: var(--success);
-  border-color: #bbf7d0;
 }
 
 .saida {
-  background: var(--danger-soft);
   color: var(--danger);
-  border-color: #fecaca;
 }
 
 .entrada:hover {
-  background: #dcfce7;
+  background: var(--success-soft);
 }
 
 .saida:hover {
-  background: #fee2e2;
+  background: var(--danger-soft);
+}
+
+.ok,
+.baixo,
+.zerado {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .ok {
@@ -352,20 +389,31 @@ button {
   background: var(--danger-soft);
 }
 
-.ok,
-.baixo,
-.zerado {
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
 .actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+}
+
+.actions-cell {
+  width: 1%;
+  white-space: nowrap;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.actions-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  line-height: 1;
+}
+
+.actions-wrap button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .pagination {
@@ -373,6 +421,7 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  font-size: 12px;
 }
 
 .pagination-meta {
@@ -387,7 +436,7 @@ button {
   align-items: center;
   gap: 10px;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -398,7 +447,7 @@ button {
 
 .pagination-info {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -411,6 +460,7 @@ button {
   background: var(--surface);
   border-color: var(--border);
   color: var(--text);
+  font-size: 12px;
 }
 
 .pagination-actions button:disabled {
@@ -418,87 +468,39 @@ button {
   cursor: not-allowed;
 }
 
-tbody tr:hover {
-  background: rgba(248, 250, 252, 0.9);
-}
-
-tbody tr:last-child td {
-  border-bottom: none;
-}
-
 @media (max-width: 768px) {
-  .page {
-    padding: 24px 12px 32px;
-  }
-
-  .header h3 {
-    font-size: 24px;
-  }
-
-  table,
-  thead,
-  tbody,
-  th,
-  td,
-  tr {
-    display: block;
-  }
-
-  thead {
-    display: none;
-  }
-
+  .page { padding: 16px 12px 24px; }
+  .filtros { gap: 10px; }
+  .header h3 { font-size: 20px; }
+  table, thead, tbody, th, td, tr { display: block; }
+  thead { display: none; }
   tr {
     background: var(--surface);
-    margin-bottom: 12px;
-    border-radius: 18px;
+    margin-bottom: 10px;
+    border-radius: var(--radius-md);
     padding: 12px;
     border: 1px solid var(--border);
   }
-
   td {
     display: flex;
     justify-content: space-between;
-    gap: 16px;
-    padding: 10px 4px;
+    gap: 12px;
+    padding: 8px 4px;
     border: none;
   }
-
   td::before {
     content: attr(data-label);
-    font-weight: 700;
+    font-weight: 600;
     color: var(--text-muted);
+    font-size: 11px;
   }
-
-  .actions {
-    justify-content: flex-end;
-    flex-wrap: wrap;
-  }
-
-  .pagination {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .pagination-meta {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .pagination-select {
-    justify-content: space-between;
-  }
-
-  .pagination-select select {
-    width: 100%;
-  }
-
-  .pagination-actions {
-    width: 100%;
-  }
-
-  .pagination-actions button {
-    flex: 1;
-  }
+  .actions-wrap { justify-content: flex-end; flex-wrap: wrap; }
+  .pagination { flex-direction: column; align-items: stretch; gap: 10px; }
+  .pagination-meta { flex-direction: column; align-items: stretch; gap: 10px; }
+  .pagination-select { justify-content: space-between; }
+  .pagination-select select { width: 100%; height: 36px; }
+  .pagination-actions { width: 100%; }
+  .pagination-actions button { flex: 1; height: 32px; }
+  .pagination-actions button:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 </style>

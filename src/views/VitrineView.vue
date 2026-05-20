@@ -3,9 +3,6 @@
     <div class="header">
       <h3>Vitrine</h3>
       <div class="header-actions">
-        <router-link to="/vitrine/insights" class="btn-secondary">
-          📊 Insights
-        </router-link>
         <button class="primary" @click="abrirNovo">
           Novo Produto
         </button>
@@ -98,8 +95,8 @@
               <span class="access-count">{{ p.acessos || 0 }}</span>
             </td>
 
-            <td data-label="Acoes">
-              <div class="actions">
+            <td class="actions-cell">
+              <div class="actions-wrap">
                 <button class="view" @click="verDetalhes(p)">Ver</button>
                 <button class="edit" @click="editar(p)">Editar</button>
                 <button class="duplicate" :disabled="salvando" @click="duplicar(p)">Duplicar</button>
@@ -798,7 +795,7 @@ export default {
 
 <style scoped>
 .page {
-  padding: 32px 20px 40px;
+  padding: 20px 20px 32px;
   max-width: 1520px;
   margin: 0 auto;
 }
@@ -808,36 +805,39 @@ export default {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 .header-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
 .btn-secondary {
-  padding: 10px 16px;
-  border-radius: 12px;
-  background: var(--surface-soft);
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
   border: 1px solid var(--border);
-  color: var(--text);
+  color: var(--text-muted);
   text-decoration: none;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .header h3 {
-  font-size: 28px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 600;
   letter-spacing: -0.02em;
 }
 
 .filtros {
   display: grid;
   grid-template-columns: 1fr 180px;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
 .feedback {
@@ -863,9 +863,8 @@ export default {
 .table-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   overflow-x: auto;
-  box-shadow: var(--shadow-sm);
   margin-bottom: 18px;
 }
 
@@ -874,21 +873,43 @@ table {
   border-collapse: collapse;
 }
 
+thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
 th {
-  background: var(--surface-soft);
-  padding: 14px 16px;
+  background: #F1F5F9;
+  padding: 8px 14px;
   text-align: left;
   color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
 td {
-  padding: 14px 16px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--border);
-  vertical-align: top;
+  vertical-align: middle;
+}
+
+tbody tr {
+  height: 42px;
+}
+
+tbody tr:nth-child(even) {
+  background: rgba(241, 245, 249, 0.55);
+}
+
+tbody tr:hover {
+  background: rgba(232, 110, 26, 0.04);
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .produto-cell {
@@ -899,12 +920,13 @@ td {
 
 .preview {
   position: relative;
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
   overflow: hidden;
   background: var(--surface-muted);
   border: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .preview img {
@@ -936,6 +958,7 @@ td {
 .info {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .nome {
@@ -974,9 +997,9 @@ td {
 .access-count {
   display: inline-flex;
   align-items: center;
-  padding: 5px 10px;
-  border-radius: 999px;
-  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -1001,8 +1024,6 @@ td {
 
 button {
   border: 1px solid transparent;
-  padding: 9px 14px;
-  border-radius: 12px;
   cursor: pointer;
   font-weight: 600;
 }
@@ -1013,33 +1034,52 @@ button:disabled {
 }
 
 .primary {
-  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  background: #E86E1A;
   color: white;
-  box-shadow: 0 10px 24px rgba(249, 115, 22, 0.22);
+  font-size: 12px;
 }
 
 .edit {
-  background: #eff6ff;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
   color: var(--info);
-  border-color: #bfdbfe;
+  font-size: 12px;
 }
 
 .view {
-  background: var(--success-soft);
+  height: 30px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
   color: var(--success);
-  border-color: #bbf7d0;
+  font-size: 12px;
 }
 
 .duplicate {
-  background: #fefce8;
-  color: #854d0e;
-  border-color: #fef08a;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: #b45309;
+  font-size: 12px;
 }
 
 .delete {
-  background: var(--danger-soft);
+  height: 30px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
   color: var(--danger);
-  border-color: #fecaca;
+  font-size: 12px;
 }
 
 .edit:hover {
@@ -1058,14 +1098,32 @@ button:disabled {
   background: #fee2e2;
 }
 
-.primary:hover {
-  transform: translateY(-1px);
-}
-
 .actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   justify-content: flex-end;
+}
+
+.actions-cell {
+  width: 1%;
+  white-space: nowrap;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.actions-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  line-height: 1;
+}
+
+.actions-wrap button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .pagination {
@@ -1087,7 +1145,7 @@ button:disabled {
   align-items: center;
   gap: 10px;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -1098,7 +1156,7 @@ button:disabled {
 
 .pagination-info {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -1111,100 +1169,45 @@ button:disabled {
   background: var(--surface);
   border-color: var(--border);
   color: var(--text);
-}
-
-tr:hover {
-  background: rgba(248, 250, 252, 0.9);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
 }
 
 @media (max-width: 768px) {
-  .page {
-    padding: 24px 12px 32px;
-  }
-
-  .header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .header-actions {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .header h3 {
-    font-size: 24px;
-  }
-
-  .primary {
-    width: 100%;
-  }
-
-  .filtros {
-    grid-template-columns: 1fr;
-  }
-
-  table,
-  thead,
-  tbody,
-  th,
-  td,
+  .page { padding: 16px 12px 24px; }
+  .header { flex-direction: column; align-items: stretch; }
+  .header-actions { width: 100%; justify-content: space-between; }
+  .header h3 { font-size: 20px; }
+  .primary { width: 100%; }
+  .filtros { grid-template-columns: 1fr; }
+  table, thead, tbody, th, td, tr { display: block; }
+  thead { display: none; }
   tr {
-    display: block;
-  }
-
-  thead {
-    display: none;
-  }
-
-  tr {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     background: var(--surface);
-    border-radius: 18px;
+    border-radius: var(--radius-md);
     padding: 12px;
     border: 1px solid var(--border);
   }
-
   td {
     display: flex;
     justify-content: space-between;
-    gap: 16px;
-    padding: 10px 4px;
+    gap: 12px;
+    padding: 8px 4px;
     border: none;
   }
-
   td::before {
     content: attr(data-label);
-    font-weight: 700;
+    font-weight: 600;
     color: var(--text-muted);
+    font-size: 11px;
   }
-
-  .actions {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
-
-  .pagination {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .pagination-meta {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .pagination-select {
-    justify-content: space-between;
-  }
-
-  .pagination-select select,
-  .pagination-actions button {
-    width: 100%;
-  }
-
-  .pagination-actions {
-    width: 100%;
-  }
+  .actions-wrap { flex-wrap: wrap; justify-content: flex-end; }
+  .pagination { flex-direction: column; align-items: stretch; }
+  .pagination-meta { flex-direction: column; align-items: stretch; }
+  .pagination-select { justify-content: space-between; }
+  .pagination-select select, .pagination-actions button { width: 100%; }
+  .pagination-actions { width: 100%; }
 }
 </style>

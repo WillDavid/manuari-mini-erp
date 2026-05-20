@@ -51,8 +51,8 @@ export default {
   data() {
     return {
       defaultColors: [
-        '#f97316', '#3b82f6', '#10b981', '#8b5cf6', 
-        '#ec4899', '#14b8a6', '#f59e0b', '#06b6d4'
+        '#E86E1A', '#3b82f6', '#2E7D32', '#8b5cf6',
+        '#ec4899', '#14b8a6', '#eab308', '#06b6d4'
       ]
     }
   },
