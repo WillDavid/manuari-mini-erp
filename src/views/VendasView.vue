@@ -4,26 +4,26 @@
     <!-- HEADER -->
     <div class="header">
       <h3>Vendas</h3>
-      <button class="primary" @click="abrirNovaVenda">
-        Nova Venda
-      </button>
+      <div class="header-actions">
+        <button class="btn-export" @click="modalExportarAberto = true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Exportar Excel
+        </button>
+        <button class="primary" @click="abrirNovaVenda">Nova Venda</button>
+      </div>
     </div>
 
     <!-- FILTROS -->
-    <div class="filtros">
-
-      <input
-        v-model="busca"
-        placeholder="Buscar cliente ou produto..."
-        class="input busca"
-      />
-
+<div class="filtros">
+      <input v-model="busca" placeholder="Buscar cliente ou produto..." class="input busca" />
       <div class="filtro-data">
         <input type="date" v-model="dataInicio" />
         <input type="date" v-model="dataFim" />
       </div>
-
-
     </div>
 
     <!-- TABELA -->
@@ -124,6 +124,39 @@
       @salvar="salvarVenda"
     />
 
+    <!-- MODAL EXPORTAR -->
+    <div v-if="modalExportarAberto" class="modal-overlay" @click.self="modalExportarAberto = false">
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-header">
+          <h2 class="modal-title">Exportar Vendas</h2>
+          <button class="close-btn" @click="modalExportarAberto = false" aria-label="Fechar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="export-desc">Selecione o período para exportar as vendas em formato Excel.</p>
+          <div class="export-fields">
+            <div class="field">
+              <label>Data Início</label>
+              <input type="date" v-model="exportDataInicio" />
+            </div>
+            <div class="field">
+              <label>Data Fim</label>
+              <input type="date" v-model="exportDataFim" />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="export-btn-cancel" @click="modalExportarAberto = false">Cancelar</button>
+          <button class="export-btn-confirm" @click="exportarExcel" :disabled="exportando || !exportDataInicio || !exportDataFim">
+            {{ exportando ? 'Exportando...' : 'Exportar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -143,10 +176,14 @@ export default {
       modalAberto: false,
       vendaEditando: null,
       isLoading: false,
+      modalExportarAberto: false,
+      exportando: false,
 
       busca: '',
       dataInicio: '',
-      dataFim: ''
+      dataFim: '',
+      exportDataInicio: '',
+      exportDataFim: ''
     }
   },
 
@@ -156,6 +193,55 @@ export default {
   },
 
   methods: {
+
+    async exportarExcel() {
+      if (this.exportando) return
+      if (!this.exportDataInicio || !this.exportDataFim) {
+        alert('Selecione o período para exportar')
+        return
+      }
+
+      this.exportando = true
+
+      try {
+        const { data: vendas, error } = await supabase
+          .from('vendas_erp')
+          .select(`
+            id, data_venda, cliente, total_bruto, desconto, total_final, forma_pagamento,
+            itens_venda_erp (
+              id, produto_id, quantidade, preco_unitario, subtotal,
+              produtos_erp (nome)
+            )
+          `)
+          .gte('data_venda', this.exportDataInicio + 'T00:00:00')
+          .lte('data_venda', this.exportDataFim + 'T23:59:59')
+          .order('data_venda', { ascending: true })
+
+        if (error) throw error
+
+        if (!vendas || vendas.length === 0) {
+          alert('Nenhuma venda encontrada no período')
+          return
+        }
+
+        const { gerarExcel, transformarVendasEmLinhas } = await import('../utils/exportacao')
+        const linhas = transformarVendasEmLinhas(vendas)
+
+        const dataInicioFormatada = this.exportDataInicio.split('-').reverse().join('/')
+        const dataFimFormatada = this.exportDataFim.split('-').reverse().join('/')
+        const nomeArquivo = `relatorio_vendas_${dataInicioFormatada}_ate_${dataFimFormatada}.xlsx`
+
+        gerarExcel(linhas, nomeArquivo)
+        this.modalExportarAberto = false
+        this.exportDataInicio = ''
+        this.exportDataFim = ''
+      } catch (error) {
+        console.error(error)
+        alert('Erro ao exportar relatório')
+      } finally {
+        this.exportando = false
+      }
+    },
 
     async buscarVendas() {
       const { data } = await supabase
@@ -557,6 +643,36 @@ export default {
   font-size: 22px;
   font-weight: 600;
   letter-spacing: -0.01em;
+  flex-shrink: 0;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.btn-export:hover:not(:disabled) {
+  background: var(--success-soft);
+  border-color: var(--success);
+  color: var(--success);
 }
 
 .table-card {
@@ -669,6 +785,7 @@ button:hover {
   grid-template-columns: 2fr 1fr;
   gap: 10px;
   margin-bottom: 14px;
+  align-items: end;
 }
 
 .busca { width: 100%; }
@@ -735,6 +852,8 @@ button:hover {
   .filtros { grid-template-columns: 1fr; }
   .header { flex-direction: column; align-items: stretch; }
   .header h3 { font-size: 20px; }
+  .header-actions { width: 100%; flex-direction: column; }
+  .btn-export { width: 100%; justify-content: center; }
   .primary { width: 100%; height: 36px; }
   table, thead, tbody, th, td, tr { display: block; }
   thead { display: none; }
@@ -767,4 +886,79 @@ button:hover {
   .pagination-actions { width: 100%; }
   .pagination-actions button { flex: 1; }
 }
+
+.export-desc {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.export-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+:deep(.modal-overlay) {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(15, 23, 42, 0.48);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+
+:deep(.modal) {
+  background: var(--surface);
+  width: 100%; max-width: 420px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  max-height: calc(100vh - 32px);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+:deep(.modal-header) {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0; gap: 12px;
+}
+
+:deep(.modal-title) { font-size: 18px; font-weight: 600; margin: 0; }
+
+:deep(.close-btn) {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; flex-shrink: 0;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface-soft); color: var(--text-muted);
+  cursor: pointer; transition: all 0.15s;
+}
+:deep(.close-btn:hover) { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
+
+:deep(.modal-body) { padding: 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px; }
+
+:deep(.field) { display: flex; flex-direction: column; gap: 4px; }
+:deep(.field label) { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+
+:deep(.modal-footer) { display: flex; gap: 8px; padding: 16px 20px; border-top: 1px solid var(--border); flex-shrink: 0; justify-content: flex-end; }
+
+:deep(.export-btn-cancel) {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0 16px; height: 36px;
+  border-radius: var(--radius-sm); border: 1px solid var(--border);
+  background: var(--surface); color: var(--text);
+  cursor: pointer; font-weight: 600; font-size: 13px;
+  transition: all 0.15s; white-space: nowrap;
+}
+:deep(.export-btn-cancel:hover) { background: var(--surface-soft); }
+
+:deep(.export-btn-confirm) {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0 16px; height: 36px;
+  border-radius: var(--radius-sm); border: 1px solid var(--primary);
+  background: var(--primary); color: white;
+  cursor: pointer; font-weight: 600; font-size: 13px;
+  transition: all 0.15s; white-space: nowrap;
+}
+:deep(.export-btn-confirm:hover) { filter: brightness(1.1); }
+:deep(.export-btn-confirm[disabled]) { opacity: 0.5; cursor: not-allowed; }
 </style>
