@@ -377,6 +377,10 @@ export default {
   touch-action: manipulation;
 }
 
+.menu-btn svg {
+  pointer-events: none;
+}
+
 .menu-btn:hover {
   background: var(--surface-soft);
   color: var(--text);
@@ -401,6 +405,11 @@ export default {
   transition: all 0.15s;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+}
+
+.logout-btn svg,
+.alert-btn svg {
+  pointer-events: none;
 }
 
 .logout-btn:hover {
