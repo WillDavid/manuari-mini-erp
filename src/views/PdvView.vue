@@ -722,211 +722,18 @@ export default {
       URL.revokeObjectURL(url)
     },
 
-    async gerarImagem() {
-      const v = this.preview
-      if (!v) return null
-
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-      const W = 800
-      const P = 36
-      let y = P
-
-      const logoImg = new Image()
-      logoImg.src = logoSrc
-      await new Promise((resolve) => { logoImg.onload = resolve })
-
-      const itemCount = (v.itensDetalhados || []).length
-      const totalHeight = P + 130 + 60 + (itemCount * 40 + 44) + 90 + 50 + 70 + P
-      canvas.width = W
-      canvas.height = Math.max(totalHeight, 800)
-
-      ctx.clearRect(0, 0, W, canvas.height)
-      ctx.fillStyle = '#FFFFFF'
-      ctx.fillRect(0, 0, W, canvas.height)
-
-      // === LOGO ===
-      const logoW = 140
-      const logoH = (logoImg.naturalHeight / logoImg.naturalWidth) * logoW
-      ctx.drawImage(logoImg, P, y, logoW, logoH)
-
-      ctx.fillStyle = '#1F2937'
-      ctx.font = 'bold 22px Inter, sans-serif'
-      ctx.textAlign = 'right'
-      ctx.fillText('MANUARI', W - P, y + 18)
-
-      ctx.fillStyle = '#667085'
-      ctx.font = '11px Inter, sans-serif'
-      ctx.fillText('CNPJ: 61.175.754/0001-77', W - P, y + 36)
-      ctx.font = '10px Inter, sans-serif'
-      ctx.fillText('RUA ITARUMAO, 30, CIDADE NOVA - MANAUS, AM', W - P, y + 50)
-
-      y = Math.max(y + logoH + 8, y + 56)
-
-      ctx.strokeStyle = '#E86E1A'
-      ctx.lineWidth = 2
-      ctx.beginPath()
-      ctx.moveTo(P, y)
-      ctx.lineTo(W - P, y)
-      ctx.stroke()
-
-      y += 16
-      ctx.fillStyle = '#E86E1A'
-      ctx.font = 'bold 18px Inter, sans-serif'
-      ctx.textAlign = 'left'
-      ctx.fillText('ORÇAMENTO', P, y)
-
-      y += 14
-      ctx.fillStyle = '#667085'
-      ctx.font = '12px Inter, sans-serif'
-      ctx.fillText('Data', P, y)
-      ctx.fillStyle = '#1F2937'
-      ctx.font = 'bold 12px Inter, sans-serif'
-      ctx.fillText(v.data || '-', P + 40, y)
-
-      ctx.fillStyle = '#667085'
-      ctx.font = '12px Inter, sans-serif'
-      ctx.textAlign = 'left'
-      ctx.fillText('Cliente', P + 280, y)
-      ctx.fillStyle = '#1F2937'
-      ctx.font = 'bold 12px Inter, sans-serif'
-      ctx.fillText(v.cliente || '—', P + 280 + 50, y)
-
-      y += 18
-
-      // === TABELA ===
-      const colX = [P, P + 48, W - P - 140, W - P - 72]
-      const colW = [48, W - P - 140 - P - 48, 68, 72]
-      const rowH = 32
-
-      ctx.fillStyle = '#E86E1A'
-      ctx.fillRect(P, y, W - P * 2, rowH)
-      ctx.fillStyle = '#FFFFFF'
-      ctx.font = 'bold 12px Inter, sans-serif'
-      ctx.textAlign = 'center'
-      ctx.fillText('Qtd', colX[0] + colW[0] / 2, y + 20)
-      ctx.fillText('Produto', colX[1] + colW[1] / 2, y + 20)
-      ctx.textAlign = 'right'
-      ctx.fillText('Valor Unit.', colX[2] + colW[2], y + 20)
-      ctx.fillText('Subtotal', colX[3] + colW[3], y + 20)
-
-      y += rowH
-      ctx.textAlign = 'left'
-      for (let i = 0; i < (v.itensDetalhados || []).length; i++) {
-        const item = v.itensDetalhados[i]
-        if (i % 2 === 1) {
-          ctx.fillStyle = '#F8FAFC'
-          ctx.fillRect(P, y, W - P * 2, rowH)
-        }
-        ctx.fillStyle = '#1F2937'
-        ctx.font = '12px Inter, sans-serif'
-        ctx.textAlign = 'center'
-        ctx.fillText(String(item.quantidade), colX[0] + colW[0] / 2, y + 20)
-        ctx.textAlign = 'left'
-        ctx.fillText(item.nome, colX[1], y + 20)
-        ctx.textAlign = 'right'
-        ctx.fillText('R$ ' + this.formatar(item.preco), colX[2] + colW[2], y + 20)
-        ctx.fillText('R$ ' + this.formatar(item.subtotal), colX[3] + colW[3], y + 20)
-        y += rowH
-      }
-
-      y += 6
-
-      // === TOTAIS ===
-      ctx.textAlign = 'right'
-      ctx.fillStyle = '#667085'
-      ctx.font = '12px Inter, sans-serif'
-      ctx.fillText('Subtotal', W - P, y)
-      ctx.fillStyle = '#1F2937'
-      ctx.font = 'bold 12px Inter, sans-serif'
-      ctx.fillText('R$ ' + this.formatar(v.total_bruto), W - P, y - 16)
-
-      if (v.desconto > 0) {
-        y += 24
-        const valorDesconto = (v.total_bruto || 0) * (v.desconto || 0) / 100
-        ctx.fillStyle = '#D94F4F'
-        ctx.font = '12px Inter, sans-serif'
-        ctx.fillText('Desconto (' + this.formatar(v.desconto) + '%)', W - P, y - 16)
-        ctx.fillText('- R$ ' + this.formatar(valorDesconto), W - P, y)
-      }
-
-      y += 14
-      ctx.strokeStyle = '#D94F4F'
-      ctx.lineWidth = 1
-      ctx.beginPath()
-      ctx.moveTo(W - P - 140, y)
-      ctx.lineTo(W - P, y)
-      ctx.stroke()
-
-      y += 16
-      ctx.fillStyle = '#E86E1A'
-      ctx.font = 'bold 16px Inter, sans-serif'
-      ctx.textAlign = 'left'
-      ctx.fillText('TOTAL', P, y)
-      ctx.textAlign = 'right'
-      ctx.fillText('R$ ' + this.formatar(v.total_final), W - P, y)
-
-      // === PAGAMENTO ===
-      y += 28
-      ctx.fillStyle = '#667085'
-      ctx.font = '12px Inter, sans-serif'
-      ctx.textAlign = 'left'
-      ctx.fillText('Forma de pagamento:', P, y)
-      ctx.fillStyle = '#1F2937'
-      ctx.font = 'bold 12px Inter, sans-serif'
-      ctx.fillText(v.forma_pagamento || '—', P + 160, y)
-
-      if (v.forma_pagamento === 'Credito') {
-        ctx.fillStyle = '#667085'
-        ctx.font = '12px Inter, sans-serif'
-        ctx.fillText('Parcelas:', P + 320, y)
-        ctx.fillStyle = '#1F2937'
-        ctx.font = 'bold 12px Inter, sans-serif'
-        ctx.fillText((v.parcelas || 1) + 'x', P + 400, y)
-      }
-
-      // === RODAPÉ ===
-      y = canvas.height - 64
-      ctx.strokeStyle = '#E86E1A'
-      ctx.lineWidth = 1.5
-      ctx.beginPath()
-      ctx.moveTo(P, y)
-      ctx.lineTo(W - P, y)
-      ctx.stroke()
-
-      y += 14
-      ctx.fillStyle = '#94A3B8'
-      ctx.font = '11px Inter, sans-serif'
-      ctx.textAlign = 'center'
-      ctx.fillText('Manuari — CNPJ: 61.175.754/0001-77', W / 2, y)
-      y += 16
-      ctx.fillText('RUA ITARUMAO, 30, CIDADE NOVA - MANAUS, AM', W / 2, y)
-      y += 14
-      ctx.fillStyle = '#94A3B8'
-      ctx.font = '10px Inter, sans-serif'
-      ctx.fillText('(Endereço de retirada)', W / 2, y)
-      y += 16
-      ctx.fillStyle = '#94A3B8'
-      ctx.font = '11px Inter, sans-serif'
-      ctx.fillText('Obrigado pela preferência!', W / 2, y)
-
-      return new Promise((resolve) => {
-        canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.92)
-      })
-    },
-
     async compartilharWhatsApp() {
       const v = this.preview
       if (!v) return
 
-      const imgBlob = await this.gerarImagem()
-      if (!imgBlob) return
+      const pdfBlob = await this.gerarPDF()
+      if (!pdfBlob) return
 
-      const filename = 'orcamento_manuari_' + Date.now() + '.jpg'
+      const filename = 'orcamento_manuari_' + Date.now() + '.pdf'
 
       if (navigator.share && navigator.canShare) {
         try {
-          const file = new File([imgBlob], filename, { type: 'image/jpeg' })
+          const file = new File([pdfBlob], filename, { type: 'application/pdf' })
           if (navigator.canShare({ files: [file] })) {
             await navigator.share({
               title: 'Orçamento Manuari',
@@ -940,8 +747,7 @@ export default {
         }
       }
 
-      // Fallback: download da imagem
-      const url = URL.createObjectURL(imgBlob)
+      const url = URL.createObjectURL(pdfBlob)
       const link = document.createElement('a')
       link.href = url
       link.download = filename
@@ -950,7 +756,6 @@ export default {
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
 
-      // Fallback 2: wa.me com texto
       let texto = '🛒 *Manuari — Orçamento*\n\n'
       texto += '📅 ' + (v.data || new Date().toLocaleString('pt-BR')) + '\n'
       if (v.cliente) texto += '👤 ' + v.cliente + '\n'
@@ -967,6 +772,7 @@ export default {
 
       window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank')
     },
+
   },
 }
 </script>
