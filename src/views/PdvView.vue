@@ -225,7 +225,7 @@
 
     <!-- === MODAL PRÉVIA (antes de efetivar venda) === -->
     <Transition name="drawer">
-      <div v-if="previaAberto" class="drawer-overlay" @click.self="fecharPrevia">
+      <div v-if="previaAberto" class="drawer-overlay previa-overlay" @click.self="fecharPrevia">
         <div class="drawer success-drawer">
           <div class="success-check" :class="{ confirmado: vendaConfirmada }">
             <svg v-if="!vendaConfirmada" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
@@ -1564,6 +1564,11 @@ export default {
   to { transform: translateY(0); }
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 .drawer-header {
   display: flex;
   align-items: center;
@@ -1929,7 +1934,7 @@ export default {
 
 /* ===== RESPONSIVO ===== */
 
-/* Desktop (>= 1024px) — sidebar visible */
+/* Desktop (>= 1024px) — sidebar visible, previa centralizada */
 @media (min-width: 1024px) {
   .pdv-header {
     padding: 8px 24px;
@@ -1956,8 +1961,19 @@ export default {
     display: none !important;
   }
 
-  .drawer-overlay {
+  .drawer-overlay:not(.previa-overlay) {
     display: none !important;
+  }
+
+  .drawer-overlay.previa-overlay {
+    align-items: center;
+  }
+
+  .drawer-overlay.previa-overlay .drawer {
+    max-width: 480px;
+    max-height: 90vh;
+    border-radius: var(--pdv-radius);
+    animation: fadeIn 0.2s ease;
   }
 }
 
