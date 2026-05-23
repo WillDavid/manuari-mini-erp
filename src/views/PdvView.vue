@@ -1098,7 +1098,7 @@ export default {
   background: var(--surface);
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - var(--header-h));
+  height: calc(100vh - var(--header-h));
   position: sticky;
   top: var(--header-h);
 }
@@ -1107,17 +1107,18 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .cart-sidebar-header h2 {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
 }
 
 .cart-sidebar-count {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
   font-weight: 600;
 }
@@ -1125,18 +1126,19 @@ export default {
 .cart-sidebar-items {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 12px;
+  padding: 6px 10px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .cart-sidebar-footer {
   border-top: 1px solid var(--border);
-  padding: 14px 16px;
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 /* ===== PRÉVIA SIDEBAR ===== */
