@@ -6,6 +6,10 @@
       </router-link>
 
       <nav :class="['nav', { open: menuAberto }]">
+        <router-link to="/pdv" class="link" active-class="active" @click="fecharMenus">
+          PDV
+        </router-link>
+
         <router-link to="/vendas" class="link" active-class="active" @click="fecharMenus">
           Vendas
         </router-link>

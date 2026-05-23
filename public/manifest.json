@@ -1,0 +1,25 @@
+{
+  "name": "Manuari ERP",
+  "short_name": "Manuari",
+  "description": "Sistema ERP para gestão de vendas, estoque e vitrine",
+  "start_url": "/pdv",
+  "display": "standalone",
+  "background_color": "#F4F5F7",
+  "theme_color": "#E86E1A",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"]
+}
