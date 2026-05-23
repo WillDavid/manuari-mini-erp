@@ -704,7 +704,7 @@ thead th {
 }
 
 tbody tr {
-  height: 40px;
+  height: auto;
 }
 
 tbody tr:nth-child(even) {

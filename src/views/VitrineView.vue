@@ -897,7 +897,7 @@ td {
 }
 
 tbody tr {
-  height: 42px;
+  height: auto;
 }
 
 tbody tr:nth-child(even) {
