@@ -48,77 +48,149 @@
         </TransitionGroup>
       </main>
 
-      <!-- === COLUNA DIREITA: CARRINHO (DESKTOP) === -->
-      <aside v-if="carrinho.length" class="cart-sidebar">
-        <div class="cart-sidebar-header">
-          <h2>Carrinho</h2>
-          <span class="cart-sidebar-count">{{ totalItens }} item(ns)</span>
-        </div>
+      <!-- === COLUNA DIREITA: CARRINHO / PRÉVIA (DESKTOP) === -->
+      <aside v-if="carrinho.length || previaAberto" class="cart-sidebar">
 
-        <div class="cart-sidebar-items">
-          <div v-for="(item, i) in carrinho" :key="item.produto_id" class="cart-item">
-            <div class="cart-item-info">
-              <span class="cart-item-nome">{{ item.nome }}</span>
-              <span class="cart-item-preco-unit">R$ {{ formatar(item.preco) }}</span>
-            </div>
-            <div class="cart-item-actions">
-              <button class="qty-btn" @click="diminuir(i)">−</button>
-              <span class="qty-value">{{ item.quantidade }}</span>
-              <button class="qty-btn" @click="aumentar(i)">+</button>
-              <span class="cart-item-subtotal">R$ {{ formatar(item.subtotal) }}</span>
-              <button class="cart-item-remove" @click="remover(i)" title="Remover">✕</button>
-            </div>
+        <!-- === MODO CARRINHO === -->
+        <template v-if="!previaAberto">
+          <div class="cart-sidebar-header">
+            <h2>Carrinho</h2>
+            <span class="cart-sidebar-count">{{ totalItens }} item(ns)</span>
           </div>
-        </div>
 
-        <div class="cart-sidebar-footer">
-          <div class="cart-summary">
-            <div class="cart-summary-row">
-              <span>Subtotal</span>
-              <span>R$ {{ formatar(total) }}</span>
-            </div>
-            <div class="cart-summary-row">
-              <span>Desconto</span>
-              <div class="cart-discount-input">
-                <input type="number" v-model.number="desconto" min="0" max="100" @input="recalcular" />
-                <span>%</span>
+          <div class="cart-sidebar-items">
+            <div v-for="(item, i) in carrinho" :key="item.produto_id" class="cart-item">
+              <div class="cart-item-info">
+                <span class="cart-item-nome">{{ item.nome }}</span>
+                <span class="cart-item-preco-unit">R$ {{ formatar(item.preco) }}</span>
+              </div>
+              <div class="cart-item-actions">
+                <button class="qty-btn" @click="diminuir(i)">−</button>
+                <span class="qty-value">{{ item.quantidade }}</span>
+                <button class="qty-btn" @click="aumentar(i)">+</button>
+                <span class="cart-item-subtotal">R$ {{ formatar(item.subtotal) }}</span>
+                <button class="cart-item-remove" @click="remover(i)" title="Remover">✕</button>
               </div>
             </div>
-            <div class="cart-summary-row total">
-              <span>Total</span>
-              <span>R$ {{ formatar(totalFinal) }}</span>
+          </div>
+
+          <div class="cart-sidebar-footer">
+            <div class="cart-summary">
+              <div class="cart-summary-row">
+                <span>Subtotal</span>
+                <span>R$ {{ formatar(total) }}</span>
+              </div>
+              <div class="cart-summary-row">
+                <span>Desconto</span>
+                <div class="cart-discount-input">
+                  <input type="number" v-model.number="desconto" min="0" max="100" @input="recalcular" />
+                  <span>%</span>
+                </div>
+              </div>
+              <div class="cart-summary-row total">
+                <span>Total</span>
+                <span>R$ {{ formatar(totalFinal) }}</span>
+              </div>
+            </div>
+
+            <div class="cart-field">
+              <label>Cliente</label>
+              <input v-model="cliente" placeholder="Nome do cliente" />
+            </div>
+
+            <div class="cart-field">
+              <label>Pagamento</label>
+              <select v-model="formaPagamento">
+                <option value="">Selecione</option>
+                <option>Pix</option>
+                <option>Dinheiro</option>
+                <option>Credito</option>
+              </select>
+            </div>
+
+            <div v-if="formaPagamento === 'Credito'" class="cart-field">
+              <label>Parcelas</label>
+              <select v-model="parcelas">
+                <option v-for="n in 12" :key="n" :value="n">{{ n }}x</option>
+              </select>
+            </div>
+
+            <div class="cart-buttons">
+              <button class="btn-limpar" @click="limparCarrinho">Limpar</button>
+              <button class="btn-finalizar" :disabled="isLoading || !carrinho.length" @click="finalizar">
+                {{ isLoading ? 'Processando...' : 'Concluir Orçamento' }}
+              </button>
+            </div>
+          </div>
+        </template>
+
+        <!-- === MODO PRÉVIA (DESKTOP) === -->
+        <template v-else>
+          <div class="cart-sidebar-header">
+            <h2>Prévia do Orçamento</h2>
+            <button class="btn-voltar-previa-sm" @click="fecharPrevia">Voltar</button>
+          </div>
+
+          <div class="cart-sidebar-items previa-items">
+            <div class="previa-summary-card">
+              <div class="previa-row">
+                <span>Cliente</span>
+                <strong>{{ preview?.cliente || '—' }}</strong>
+              </div>
+              <div class="previa-row">
+                <span>Itens</span>
+                <strong>{{ preview?.itens || 0 }}</strong>
+              </div>
+            </div>
+
+            <div v-for="(item, i) in preview?.itensDetalhados" :key="i" class="previa-item">
+              <div class="previa-item-left">
+                <span class="previa-item-qty">{{ item.quantidade }}x</span>
+                <span class="previa-item-name">{{ item.nome }}</span>
+              </div>
+              <span class="previa-item-sub">R$ {{ formatar(item.subtotal) }}</span>
+            </div>
+
+            <div class="previa-totals">
+              <div class="previa-row">
+                <span>Subtotal</span>
+                <span>R$ {{ formatar(preview?.total_bruto) }}</span>
+              </div>
+              <div v-if="preview?.desconto > 0" class="previa-row">
+                <span>Desconto ({{ formatar(preview?.desconto) }}%)</span>
+                <span class="previa-desconto">- R$ {{ formatar((preview?.total_bruto || 0) * (preview?.desconto || 0) / 100) }}</span>
+              </div>
+              <div class="previa-divider"></div>
+              <div class="previa-row previa-total">
+                <span>TOTAL</span>
+                <span>R$ {{ formatar(preview?.total_final) }}</span>
+              </div>
+              <div class="previa-row">
+                <span>Pagamento</span>
+                <strong>{{ preview?.forma_pagamento || '—' }}</strong>
+              </div>
             </div>
           </div>
 
-          <div class="cart-field">
-            <label>Cliente</label>
-            <input v-model="cliente" placeholder="Nome do cliente" />
-          </div>
-
-          <div class="cart-field">
-            <label>Pagamento</label>
-            <select v-model="formaPagamento">
-              <option value="">Selecione</option>
-              <option>Pix</option>
-              <option>Dinheiro</option>
-              <option>Credito</option>
-            </select>
-          </div>
-
-          <div v-if="formaPagamento === 'Credito'" class="cart-field">
-            <label>Parcelas</label>
-            <select v-model="parcelas">
-              <option v-for="n in 12" :key="n" :value="n">{{ n }}x</option>
-            </select>
-          </div>
-
-          <div class="cart-buttons">
-            <button class="btn-limpar" @click="limparCarrinho">Limpar</button>
-            <button class="btn-finalizar" :disabled="isLoading || !carrinho.length" @click="finalizar">
-              {{ isLoading ? 'Processando...' : 'Concluir Orçamento' }}
+          <div class="cart-sidebar-footer previa-footer">
+            <button class="btn-whatsapp" @click="compartilharWhatsApp">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+              Compartilhar WhatsApp
+            </button>
+            <button class="btn-pdf-sm" @click="baixarPDF">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              Baixar PDF
             </button>
           </div>
-        </div>
+
+          <div class="previa-actions-sidebar">
+            <button class="btn-efetivar" :disabled="efetivando" @click="confirmarVenda">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              {{ efetivando ? 'Efetivando...' : 'Efetivar Venda' }}
+            </button>
+          </div>
+        </template>
+
       </aside>
 
     </div>
@@ -1020,7 +1092,7 @@ export default {
 
 /* ===== CARRINHO SIDEBAR (DESKTOP) ===== */
 .cart-sidebar {
-  width: 360px;
+  width: 300px;
   flex-shrink: 0;
   border-left: 1px solid var(--border);
   background: var(--surface);
@@ -1065,6 +1137,196 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+/* ===== PRÉVIA SIDEBAR ===== */
+.previa-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.previa-summary-card {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.previa-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.previa-item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.previa-item-qty {
+  font-weight: 700;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.previa-item-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.previa-item-sub {
+  font-weight: 600;
+  color: var(--text);
+  flex-shrink: 0;
+  font-feature-settings: 'tnum' 1;
+}
+
+.previa-totals {
+  background: var(--primary-soft);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.previa-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.previa-row strong {
+  color: var(--text);
+}
+
+.previa-desconto {
+  color: var(--danger) !important;
+  font-weight: 600;
+}
+
+.previa-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 2px 0;
+}
+
+.previa-total {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--primary) !important;
+}
+
+.previa-total span:last-child {
+  color: var(--primary);
+}
+
+.previa-footer {
+  display: flex;
+  gap: 6px;
+  flex-direction: row !important;
+}
+
+.previa-footer .btn-whatsapp,
+.previa-footer .btn-pdf-sm {
+  flex: 1;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+
+.previa-footer .btn-whatsapp {
+  background: #25D366;
+  border: 1px solid #25D366;
+  color: #fff;
+}
+
+.previa-footer .btn-whatsapp:hover {
+  background: #1ebe5d;
+}
+
+.previa-footer .btn-pdf-sm {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--danger);
+}
+
+.previa-footer .btn-pdf-sm:hover {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+}
+
+.btn-voltar-previa-sm {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btn-voltar-previa-sm:hover {
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.previa-actions-sidebar {
+  padding: 0 16px 14px;
+}
+
+.previa-actions-sidebar .btn-efetivar {
+  width: 100%;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s;
+  background: var(--success);
+  border: 1px solid var(--success);
+  color: #fff;
+}
+
+.previa-actions-sidebar .btn-efetivar:hover:not(:disabled) {
+  background: var(--success-hover);
+}
+
+.previa-actions-sidebar .btn-efetivar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ===== CART ITEM (compartilhado drawer/sidebar) ===== */
@@ -1740,7 +2002,7 @@ export default {
 
 /* ===== RESPONSIVO ===== */
 
-/* Desktop (>= 1024px) — sidebar visible, previa centralizada */
+/* Desktop (>= 1024px) — sidebar visible */
 @media (min-width: 1024px) {
   .pdv-header {
     padding: 8px 24px;
@@ -1767,19 +2029,8 @@ export default {
     display: none !important;
   }
 
-  .drawer-overlay:not(.previa-overlay) {
+  .drawer-overlay {
     display: none !important;
-  }
-
-  .drawer-overlay.previa-overlay {
-    align-items: center;
-  }
-
-  .drawer-overlay.previa-overlay .drawer {
-    max-width: 480px;
-    max-height: 90vh;
-    border-radius: var(--pdv-radius);
-    animation: fadeIn 0.2s ease;
   }
 }
 
