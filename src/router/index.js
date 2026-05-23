@@ -7,7 +7,7 @@ import PdvView from '../views/PdvView.vue'
 import UserIdentifier from '../components/UserIdentifier.vue'
 
 const routes = [
-  { path: '/', redirect: '/identificar' },
+  { path: '/', redirect: '/pdv' },
   { path: '/identificar', component: UserIdentifier },
   { path: '/produtos', component: ProdutosView, meta: { requiresAuth: true } },
   { path: '/vendas', component: VendasView, meta: { requiresAuth: true } },
@@ -28,7 +28,7 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth && !isLogged) {
     next('/identificar')
   } else if (to.path === '/identificar' && isLogged) {
-    next('/vendas')
+    next('/pdv')
   } else {
     next()
   }

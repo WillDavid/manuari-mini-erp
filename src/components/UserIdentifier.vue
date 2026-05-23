@@ -44,7 +44,7 @@ data() {
   mounted() {
     const expiration = localStorage.getItem('authExpires')
     if (expiration && Date.now() < parseInt(expiration)) {
-      this.$router.push('/vendas')
+      this.$router.push('/pdv')
     } else {
       localStorage.removeItem('authExpires')
     }
@@ -68,7 +68,7 @@ data() {
 
         const expiresAt = Date.now() + (DIAS_LOGADO * 24 * 60 * 60 * 1000)
         localStorage.setItem('authExpires', expiresAt.toString())
-        this.$router.push('/vendas')
+        this.$router.push('/pdv')
       } catch (error) {
         this.erro = 'Erro ao entrar. Tente novamente.'
       } finally {

@@ -275,7 +275,7 @@
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
               Compartilhar no WhatsApp
             </button>
-            <button class="btn-pdf" @click="gerarPDF">
+            <button class="btn-pdf" @click="baixarPDF">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
               Baixar PDF
             </button>
@@ -554,19 +554,16 @@ export default {
 
     async gerarPDF() {
       const v = this.preview
-      if (!v) return
+      if (!v) return null
 
       const doc = new jsPDF({ unit: 'mm', format: 'a4' })
       const pageWidth = 210
       const margin = 18
-      const contentWidth = pageWidth - margin * 2
 
-      // === CARREGAR LOGO ===
       const logoImg = new Image()
       logoImg.src = logoSrc
       await new Promise((resolve) => { logoImg.onload = resolve })
 
-      // === CABEÇALHO COM LOGO ===
       const logoW = 40
       const logoH = (logoImg.naturalHeight / logoImg.naturalWidth) * logoW
       doc.addImage(logoImg, 'PNG', margin, 14, logoW, logoH)
@@ -580,22 +577,19 @@ export default {
       doc.setFont(undefined, 'normal')
       doc.setTextColor(102, 112, 133)
       doc.text('CNPJ: 61.175.754/0001-77', pageWidth - margin, 24, { align: 'right' })
-      doc.text('WILLIAM DAVID MARTINS DE ALMEIDA', pageWidth - margin, 29, { align: 'right' })
+      doc.text('RUA ITARUMAO, 30, CIDADE NOVA - MANAUS, AM', pageWidth - margin, 29, { align: 'right' })
 
-      // Linha laranja
       const headerBottom = Math.max(14 + logoH, 32) + 4
       doc.setDrawColor(232, 110, 26)
       doc.setLineWidth(0.8)
       doc.line(margin, headerBottom, pageWidth - margin, headerBottom)
 
-      // === TÍTULO ===
       let y = headerBottom + 10
       doc.setFontSize(14)
       doc.setFont(undefined, 'bold')
       doc.setTextColor(232, 110, 26)
       doc.text('ORÇAMENTO', margin, y)
 
-      // === INFO LINHA 1 ===
       y += 8
       doc.setFontSize(9)
       doc.setFont(undefined, 'normal')
@@ -612,7 +606,6 @@ export default {
       doc.setFont(undefined, 'bold')
       doc.text(v.cliente || '—', pageWidth / 2 + 22, y)
 
-      // === TABELA DE ITENS ===
       y += 10
       const headers = [['Qtd', 'Produto', 'Valor Unit.', 'Subtotal']]
       const rows = (v.itensDetalhados || []).map((item) => [
@@ -634,12 +627,8 @@ export default {
           fontStyle: 'bold',
           halign: 'center',
         },
-        bodyStyles: {
-          fontSize: 9,
-        },
-        alternateRowStyles: {
-          fillColor: [248, 250, 252],
-        },
+        bodyStyles: { fontSize: 9 },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
         columnStyles: {
           0: { cellWidth: 18, halign: 'center' },
           1: { cellWidth: 'auto' },
@@ -648,12 +637,10 @@ export default {
         },
       })
 
-      // === TOTAIS ===
       y = doc.lastAutoTable.finalY + 8
       const totalLabelX = margin
       const totalValueX = pageWidth - margin
 
-      // Subtotal
       doc.setFontSize(9)
       doc.setFont(undefined, 'normal')
       doc.setTextColor(102, 112, 133)
@@ -662,7 +649,6 @@ export default {
       doc.setFont(undefined, 'bold')
       doc.text('R$ ' + this.formatar(v.total_bruto), totalValueX, y, { align: 'right' })
 
-      // Desconto
       if (v.desconto > 0) {
         y += 6
         const valorDesconto = (v.total_bruto || 0) * (v.desconto || 0) / 100
@@ -672,21 +658,18 @@ export default {
         doc.text('- R$ ' + this.formatar(valorDesconto), totalValueX, y, { align: 'right' })
       }
 
-      // Linha separadora
       y += 5
       doc.setDrawColor(217, 79, 79)
       doc.setLineWidth(0.3)
       doc.line(totalLabelX, y, totalValueX, y)
       y += 6
 
-      // Total
       doc.setFont(undefined, 'bold')
       doc.setFontSize(13)
       doc.setTextColor(232, 110, 26)
       doc.text('TOTAL', totalLabelX, y)
       doc.text('R$ ' + this.formatar(v.total_final), totalValueX, y, { align: 'right' })
 
-      // === PAGAMENTO ===
       y += 10
       doc.setFontSize(9)
       doc.setFont(undefined, 'normal')
@@ -705,46 +688,30 @@ export default {
         doc.text((v.parcelas || 1) + 'x', pageWidth / 2 + 28, y)
       }
 
-      // === RODAPÉ ===
       y = 275
       doc.setDrawColor(232, 110, 26)
       doc.setLineWidth(0.5)
       doc.line(margin, y, pageWidth - margin, y)
       y += 6
-
       doc.setFontSize(8)
       doc.setFont(undefined, 'normal')
       doc.setTextColor(148, 163, 184)
       doc.text('Manuari — CNPJ: 61.175.754/0001-77', pageWidth / 2, y, { align: 'center' })
       y += 4
-      doc.text('WILLIAM DAVID MARTINS DE ALMEIDA', pageWidth / 2, y, { align: 'center' })
+      doc.text('RUA ITARUMAO, 30, CIDADE NOVA - MANAUS, AM', pageWidth / 2, y, { align: 'center' })
       y += 4
+      doc.text('(Endereço de retirada)', pageWidth / 2, y, { align: 'center' })
+      y += 6
       doc.text('Obrigado pela preferência!', pageWidth / 2, y, { align: 'center' })
 
-      // === GERAR E COMPARTILHAR ===
-      const pdfBlob = doc.output('blob')
-      const ts = Date.now()
-      const filename = 'orcamento_manuari_' + ts + '.pdf'
+      return doc.output('blob')
+    },
 
-      // Tenta compartilhar via Web Share API (abre WhatsApp, Telegram, etc.)
-      if (navigator.share && navigator.canShare) {
-        try {
-          const file = new File([pdfBlob], filename, { type: 'application/pdf' })
-          if (navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              title: 'Orçamento Manuari',
-              text: 'Orçamento - Total: R$ ' + this.formatar(v.total_final),
-              files: [file],
-            })
-            this.fecharSucesso()
-            return
-          }
-        } catch (e) {
-          if (e.name !== 'AbortError') console.error(e)
-        }
-      }
+    async baixarPDF() {
+      const pdfBlob = await this.gerarPDF()
+      if (!pdfBlob) return
 
-      // Fallback: download direto
+      const filename = 'orcamento_manuari_' + Date.now() + '.pdf'
       const url = URL.createObjectURL(pdfBlob)
       const link = document.createElement('a')
       link.href = url
@@ -755,26 +722,242 @@ export default {
       URL.revokeObjectURL(url)
     },
 
+    async gerarImagem() {
+      const v = this.preview
+      if (!v) return null
+
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      const W = 800
+      const P = 36
+      let y = P
+
+      const logoImg = new Image()
+      logoImg.src = logoSrc
+      await new Promise((resolve) => { logoImg.onload = resolve })
+
+      const itemCount = (v.itensDetalhados || []).length
+      const totalHeight = P + 130 + 60 + (itemCount * 40 + 44) + 90 + 50 + 70 + P
+      canvas.width = W
+      canvas.height = Math.max(totalHeight, 800)
+
+      ctx.clearRect(0, 0, W, canvas.height)
+      ctx.fillStyle = '#FFFFFF'
+      ctx.fillRect(0, 0, W, canvas.height)
+
+      // === LOGO ===
+      const logoW = 140
+      const logoH = (logoImg.naturalHeight / logoImg.naturalWidth) * logoW
+      ctx.drawImage(logoImg, P, y, logoW, logoH)
+
+      ctx.fillStyle = '#1F2937'
+      ctx.font = 'bold 22px Inter, sans-serif'
+      ctx.textAlign = 'right'
+      ctx.fillText('MANUARI', W - P, y + 18)
+
+      ctx.fillStyle = '#667085'
+      ctx.font = '11px Inter, sans-serif'
+      ctx.fillText('CNPJ: 61.175.754/0001-77', W - P, y + 36)
+      ctx.font = '10px Inter, sans-serif'
+      ctx.fillText('RUA ITARUMAO, 30, CIDADE NOVA - MANAUS, AM', W - P, y + 50)
+
+      y = Math.max(y + logoH + 8, y + 56)
+
+      ctx.strokeStyle = '#E86E1A'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.moveTo(P, y)
+      ctx.lineTo(W - P, y)
+      ctx.stroke()
+
+      y += 16
+      ctx.fillStyle = '#E86E1A'
+      ctx.font = 'bold 18px Inter, sans-serif'
+      ctx.textAlign = 'left'
+      ctx.fillText('ORÇAMENTO', P, y)
+
+      y += 14
+      ctx.fillStyle = '#667085'
+      ctx.font = '12px Inter, sans-serif'
+      ctx.fillText('Data', P, y)
+      ctx.fillStyle = '#1F2937'
+      ctx.font = 'bold 12px Inter, sans-serif'
+      ctx.fillText(v.data || '-', P + 40, y)
+
+      ctx.fillStyle = '#667085'
+      ctx.font = '12px Inter, sans-serif'
+      ctx.textAlign = 'left'
+      ctx.fillText('Cliente', P + 280, y)
+      ctx.fillStyle = '#1F2937'
+      ctx.font = 'bold 12px Inter, sans-serif'
+      ctx.fillText(v.cliente || '—', P + 280 + 50, y)
+
+      y += 18
+
+      // === TABELA ===
+      const colX = [P, P + 48, W - P - 140, W - P - 72]
+      const colW = [48, W - P - 140 - P - 48, 68, 72]
+      const rowH = 32
+
+      ctx.fillStyle = '#E86E1A'
+      ctx.fillRect(P, y, W - P * 2, rowH)
+      ctx.fillStyle = '#FFFFFF'
+      ctx.font = 'bold 12px Inter, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText('Qtd', colX[0] + colW[0] / 2, y + 20)
+      ctx.fillText('Produto', colX[1] + colW[1] / 2, y + 20)
+      ctx.textAlign = 'right'
+      ctx.fillText('Valor Unit.', colX[2] + colW[2], y + 20)
+      ctx.fillText('Subtotal', colX[3] + colW[3], y + 20)
+
+      y += rowH
+      ctx.textAlign = 'left'
+      for (let i = 0; i < (v.itensDetalhados || []).length; i++) {
+        const item = v.itensDetalhados[i]
+        if (i % 2 === 1) {
+          ctx.fillStyle = '#F8FAFC'
+          ctx.fillRect(P, y, W - P * 2, rowH)
+        }
+        ctx.fillStyle = '#1F2937'
+        ctx.font = '12px Inter, sans-serif'
+        ctx.textAlign = 'center'
+        ctx.fillText(String(item.quantidade), colX[0] + colW[0] / 2, y + 20)
+        ctx.textAlign = 'left'
+        ctx.fillText(item.nome, colX[1], y + 20)
+        ctx.textAlign = 'right'
+        ctx.fillText('R$ ' + this.formatar(item.preco), colX[2] + colW[2], y + 20)
+        ctx.fillText('R$ ' + this.formatar(item.subtotal), colX[3] + colW[3], y + 20)
+        y += rowH
+      }
+
+      y += 6
+
+      // === TOTAIS ===
+      ctx.textAlign = 'right'
+      ctx.fillStyle = '#667085'
+      ctx.font = '12px Inter, sans-serif'
+      ctx.fillText('Subtotal', W - P, y)
+      ctx.fillStyle = '#1F2937'
+      ctx.font = 'bold 12px Inter, sans-serif'
+      ctx.fillText('R$ ' + this.formatar(v.total_bruto), W - P, y - 16)
+
+      if (v.desconto > 0) {
+        y += 24
+        const valorDesconto = (v.total_bruto || 0) * (v.desconto || 0) / 100
+        ctx.fillStyle = '#D94F4F'
+        ctx.font = '12px Inter, sans-serif'
+        ctx.fillText('Desconto (' + this.formatar(v.desconto) + '%)', W - P, y - 16)
+        ctx.fillText('- R$ ' + this.formatar(valorDesconto), W - P, y)
+      }
+
+      y += 14
+      ctx.strokeStyle = '#D94F4F'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(W - P - 140, y)
+      ctx.lineTo(W - P, y)
+      ctx.stroke()
+
+      y += 16
+      ctx.fillStyle = '#E86E1A'
+      ctx.font = 'bold 16px Inter, sans-serif'
+      ctx.textAlign = 'left'
+      ctx.fillText('TOTAL', P, y)
+      ctx.textAlign = 'right'
+      ctx.fillText('R$ ' + this.formatar(v.total_final), W - P, y)
+
+      // === PAGAMENTO ===
+      y += 28
+      ctx.fillStyle = '#667085'
+      ctx.font = '12px Inter, sans-serif'
+      ctx.textAlign = 'left'
+      ctx.fillText('Forma de pagamento:', P, y)
+      ctx.fillStyle = '#1F2937'
+      ctx.font = 'bold 12px Inter, sans-serif'
+      ctx.fillText(v.forma_pagamento || '—', P + 160, y)
+
+      if (v.forma_pagamento === 'Credito') {
+        ctx.fillStyle = '#667085'
+        ctx.font = '12px Inter, sans-serif'
+        ctx.fillText('Parcelas:', P + 320, y)
+        ctx.fillStyle = '#1F2937'
+        ctx.font = 'bold 12px Inter, sans-serif'
+        ctx.fillText((v.parcelas || 1) + 'x', P + 400, y)
+      }
+
+      // === RODAPÉ ===
+      y = canvas.height - 64
+      ctx.strokeStyle = '#E86E1A'
+      ctx.lineWidth = 1.5
+      ctx.beginPath()
+      ctx.moveTo(P, y)
+      ctx.lineTo(W - P, y)
+      ctx.stroke()
+
+      y += 14
+      ctx.fillStyle = '#94A3B8'
+      ctx.font = '11px Inter, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText('Manuari — CNPJ: 61.175.754/0001-77', W / 2, y)
+      y += 16
+      ctx.fillText('RUA ITARUMAO, 30, CIDADE NOVA - MANAUS, AM', W / 2, y)
+      y += 14
+      ctx.fillStyle = '#94A3B8'
+      ctx.font = '10px Inter, sans-serif'
+      ctx.fillText('(Endereço de retirada)', W / 2, y)
+      y += 16
+      ctx.fillStyle = '#94A3B8'
+      ctx.font = '11px Inter, sans-serif'
+      ctx.fillText('Obrigado pela preferência!', W / 2, y)
+
+      return new Promise((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.92)
+      })
+    },
+
     async compartilharWhatsApp() {
       const v = this.preview
       if (!v) return
 
-      // Tenta compartilhar o PDF via Web Share API
+      const imgBlob = await this.gerarImagem()
+      if (!imgBlob) return
+
+      const filename = 'orcamento_manuari_' + Date.now() + '.jpg'
+
       if (navigator.share && navigator.canShare) {
-        await this.gerarPDF()
-        return
+        try {
+          const file = new File([imgBlob], filename, { type: 'image/jpeg' })
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: 'Orçamento Manuari',
+              text: 'Orçamento - Total: R$ ' + this.formatar(v.total_final),
+              files: [file],
+            })
+            return
+          }
+        } catch (e) {
+          if (e.name !== 'AbortError') console.error(e)
+        }
       }
 
-      // Fallback: texto formatado via wa.me
+      // Fallback: download da imagem
+      const url = URL.createObjectURL(imgBlob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      // Fallback 2: wa.me com texto
       let texto = '🛒 *Manuari — Orçamento*\n\n'
       texto += '📅 ' + (v.data || new Date().toLocaleString('pt-BR')) + '\n'
       if (v.cliente) texto += '👤 ' + v.cliente + '\n'
       texto += '\n*Itens:*\n'
-
       for (const item of v.itensDetalhados || []) {
         texto += '• ' + item.quantidade + 'x ' + item.nome + ' — R$ ' + this.formatar(item.subtotal) + '\n'
       }
-
       texto += '\n*Subtotal:* R$ ' + this.formatar(v.total_bruto)
       if (v.desconto > 0) {
         texto += '\n*Desconto:* ' + this.formatar(v.desconto) + '%'
@@ -782,8 +965,7 @@ export default {
       texto += '\n*Total: R$ ' + this.formatar(v.total_final) + '*'
       texto += '\n💳 ' + (v.forma_pagamento || '—')
 
-      const url = 'https://wa.me/?text=' + encodeURIComponent(texto)
-      window.open(url, '_blank')
+      window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank')
     },
   },
 }
