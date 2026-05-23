@@ -1177,37 +1177,78 @@ button:disabled {
 @media (max-width: 768px) {
   .page { padding: 16px 12px 24px; }
   .header { flex-direction: column; align-items: stretch; }
-  .header-actions { width: 100%; justify-content: space-between; }
+  .header-actions { width: 100%; justify-content: stretch; gap: 8px; }
   .header h3 { font-size: 20px; }
-  .primary { width: 100%; }
+  .primary { width: 100%; height: 44px; font-size: 14px; }
   .filtros { grid-template-columns: 1fr; }
   table, thead, tbody, th, td, tr { display: block; }
   thead { display: none; }
   tr {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     background: var(--surface);
     border-radius: var(--radius-md);
-    padding: 12px;
+    padding: 14px;
     border: 1px solid var(--border);
   }
   td {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     gap: 12px;
     padding: 8px 4px;
     border: none;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    min-height: 36px;
+  }
+  td:last-child {
+    border-bottom: none;
   }
   td::before {
     content: attr(data-label);
     font-weight: 600;
     color: var(--text-muted);
     font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    flex-shrink: 0;
   }
-  .actions-wrap { flex-wrap: wrap; justify-content: flex-end; }
+  .actions-cell {
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+    text-align: left;
+  }
+  .actions-wrap {
+    width: 100%;
+    display: flex;
+    gap: 6px;
+    justify-content: stretch;
+    flex-wrap: wrap;
+  }
+  .actions-wrap button {
+    flex: 1;
+    min-width: 70px;
+    height: 40px;
+    font-size: 12px;
+  }
   .pagination { flex-direction: column; align-items: stretch; }
   .pagination-meta { flex-direction: column; align-items: stretch; }
   .pagination-select { justify-content: space-between; }
-  .pagination-select select, .pagination-actions button { width: 100%; }
-  .pagination-actions { width: 100%; }
+  .pagination-select select { width: 100%; height: 40px; font-size: 14px; }
+  .pagination-actions { width: 100%; display: flex; gap: 8px; }
+  .pagination-actions button { flex: 1; height: 40px; font-size: 13px; }
+}
+
+@media (min-width: 769px) and (max-width: 1023px) {
+  .page { padding: 20px 16px 28px; }
+  .filtros { grid-template-columns: 1fr 160px; }
+  .header h3 { font-size: 20px; }
+  table { font-size: 12px; }
+  th, td { padding: 6px 10px; }
+  .actions-wrap { gap: 4px; }
+  .actions-wrap button { height: 28px; font-size: 11px; padding: 0 8px; }
+  .produto-cell { gap: 8px; }
+  .preview { width: 36px; height: 36px; }
 }
 </style>

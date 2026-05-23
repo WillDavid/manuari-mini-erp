@@ -363,8 +363,8 @@ export default {
 
 .menu-btn {
   display: none;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -373,6 +373,8 @@ export default {
   align-items: center;
   justify-content: center;
   transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .menu-btn:hover {
@@ -380,9 +382,14 @@ export default {
   color: var(--text);
 }
 
+.menu-btn:active {
+  background: var(--surface-muted);
+  transform: scale(0.95);
+}
+
 .logout-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -392,6 +399,8 @@ export default {
   align-items: center;
   justify-content: center;
   transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .logout-btn:hover {
@@ -407,6 +416,7 @@ export default {
 
   .menu-btn {
     display: flex;
+    z-index: 35;
   }
 
   .nav {
@@ -415,15 +425,16 @@ export default {
     right: 12px;
     background: var(--surface);
     flex-direction: column;
-    width: 200px;
+    width: 220px;
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    box-shadow: var(--shadow-md);
-    padding: 6px;
+    box-shadow: 0 8px 32px rgba(15, 23, 42, 0.18);
+    padding: 8px;
     display: none;
     height: auto;
-    gap: 2px;
+    gap: 4px;
     margin: 0;
+    z-index: 34;
   }
 
   .nav.open {
@@ -432,15 +443,20 @@ export default {
 
   .link {
     width: 100%;
-    height: 40px;
-    padding: 0 10px;
+    height: 44px;
+    padding: 0 12px;
     border-bottom: none;
     border-radius: var(--radius-sm);
+    font-size: 14px;
   }
 
   .link.active {
     background: var(--primary-soft);
     color: var(--primary);
+  }
+
+  .nav .link:active {
+    background: var(--surface-muted);
   }
 
   .logo img {
@@ -449,7 +465,8 @@ export default {
 
   .alert-dropdown {
     right: -16px;
-    width: 300px;
+    width: calc(100vw - 32px);
+    max-width: 340px;
   }
 }
 </style>
