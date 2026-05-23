@@ -429,13 +429,34 @@ export default {
 
     async buscarProdutos() {
       this.carregando = true
+
+      const { data: vendasData, error: vendasError } = await supabase
+        .from('itens_venda_erp')
+        .select('produto_id, quantidade')
+
+      const mapaVendas = {}
+      if (!vendasError && vendasData) {
+        for (const item of vendasData) {
+          mapaVendas[item.produto_id] = (mapaVendas[item.produto_id] || 0) + item.quantidade
+        }
+      }
+
       const { data, error } = await supabase
         .from('produtos_erp')
         .select('*')
         .eq('ativo', true)
-        .order('nome')
 
-      if (!error) this.produtos = data || []
+      if (!error && data) {
+        this.produtos = data
+          .map((p) => ({
+            ...p,
+            totalVendido: mapaVendas[p.id] || 0,
+          }))
+          .sort((a, b) => b.totalVendido - a.totalVendido)
+      } else {
+        this.produtos = []
+      }
+
       this.carregando = false
     },
 
