@@ -1098,7 +1098,7 @@ export default {
   background: var(--surface);
   display: flex;
   flex-direction: column;
-  height: calc(100vh - var(--header-h));
+  height: auto;
   position: sticky;
   top: var(--header-h);
 }
@@ -1124,8 +1124,6 @@ export default {
 }
 
 .cart-sidebar-items {
-  flex: 1;
-  overflow-y: auto;
   padding: 6px 10px;
   display: flex;
   flex-direction: column;
