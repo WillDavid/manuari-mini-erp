@@ -52,6 +52,7 @@ export function transformarVendasEmLinhas(vendas) {
     const itensRateados = ratearDesconto(venda.itens_venda_erp || [], desconto, totalBruto)
 
     for (const item of itensRateados) {
+      const custoUnitario = item.preco_custo || item.produtos_erp?.preco_custo || 0
       linhas.push({
         data_venda: formatarData(venda.data_venda),
         cliente: venda.cliente || '-',
@@ -59,6 +60,10 @@ export function transformarVendasEmLinhas(vendas) {
         quantidade: item.quantidade,
         valor_unitario: formatarMoeda(item.preco_unitario),
         valor_unitario_num: Number(item.preco_unitario || 0),
+        custo_unitario: formatarMoeda(custoUnitario),
+        custo_unitario_num: Number(custoUnitario),
+        custo_total: formatarMoeda(custoUnitario * item.quantidade),
+        custo_total_num: Number((custoUnitario * item.quantidade).toFixed(2)),
         subtotal_item: formatarMoeda(item.subtotal),
         subtotal_item_num: Number(item.subtotal || 0),
         desconto_percentual: formatarMoeda(desconto),
@@ -88,6 +93,8 @@ export function gerarExcel(dados, nomeArquivo = 'relatorio_vendas.xlsx') {
       'Produto',
       'Qtd',
       'Valor Unit.',
+      'Custo Unit.',
+      'Custo Total',
       'Subtotal',
       'Desc. %',
       'Valor Desc.',
@@ -103,7 +110,9 @@ export function gerarExcel(dados, nomeArquivo = 'relatorio_vendas.xlsx') {
       row.cliente,
       row.produto,
       row.quantidade,
-      row.subtotal_item_num,
+      row.valor_unitario_num,
+      row.custo_unitario_num,
+      row.custo_total_num,
       row.subtotal_item_num,
       row.desconto_percentual_num / 100,
       row.valor_desconto_num,
@@ -112,6 +121,8 @@ export function gerarExcel(dados, nomeArquivo = 'relatorio_vendas.xlsx') {
       row.pedido_id
     ])
   }
+
+
 
   const ws = XLSX.utils.aoa_to_sheet(wsData)
 
@@ -122,6 +133,8 @@ export function gerarExcel(dados, nomeArquivo = 'relatorio_vendas.xlsx') {
     { wch: 6 },
     { wch: 14 },
     { wch: 14 },
+    { wch: 14 },
+    { wch: 14 },
     { wch: 8 },
     { wch: 12 },
     { wch: 14 },
@@ -130,12 +143,12 @@ export function gerarExcel(dados, nomeArquivo = 'relatorio_vendas.xlsx') {
   ]
   ws['!cols'] = colWidths
 
-  ws['!autofilter'] = { ref: `A1:K1` }
+  ws['!autofilter'] = { ref: `A1:M1` }
 
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Vendas Exportadas')
 
-  const range = XLSX.utils.decode_range(wsData[0] ? `A1:K${wsData.length}` : 'A1:K1')
+  const range = XLSX.utils.decode_range(wsData[0] ? `A1:M${wsData.length}` : 'A1:M1')
   ws['!rows'] = [{ hpt: 28 }]
 
   for (let R = range.s.r + 1; R <= range.e.r; ++R) {

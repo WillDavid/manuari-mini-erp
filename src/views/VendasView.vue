@@ -209,8 +209,8 @@ export default {
           .select(`
             id, data_venda, cliente, total_bruto, desconto, total_final, forma_pagamento,
             itens_venda_erp (
-              id, produto_id, quantidade, preco_unitario, subtotal,
-              produtos_erp (nome)
+              id, produto_id, quantidade, preco_unitario, preco_custo, subtotal,
+              produtos_erp (nome, preco_custo)
             )
           `)
           .gte('data_venda', this.exportDataInicio + 'T00:00:00')
@@ -253,8 +253,9 @@ export default {
             produto_id,
             quantidade,
             preco_unitario,
+            preco_custo,
             subtotal,
-            produtos_erp (nome)
+            produtos_erp (nome, preco_custo)
           )
         `)
         .order('data_venda', { ascending: false })
@@ -285,7 +286,8 @@ export default {
           nome: i.produtos_erp.nome,
           preco: i.preco_unitario,
           quantidade: i.quantidade,
-          subtotal: i.subtotal
+          subtotal: i.subtotal,
+          preco_custo: i.preco_custo || i.produtos_erp?.preco_custo || 0
         }))
       }
 
@@ -306,13 +308,16 @@ export default {
 
     // VALIDAÇÃO DE ESTOQUE
     const errosEstoque = []
+    const custosMap = {}
     
     for (const item of venda.itens) {
       const { data: produto } = await supabase
         .from('produtos_erp')
-        .select('estoque, nome')
+        .select('estoque, nome, preco_custo')
         .eq('id', item.produto_id)
         .single()
+
+      custosMap[item.produto_id] = produto.preco_custo || 0
 
       let estoqueDisponivel = produto.estoque || 0
 
@@ -422,7 +427,8 @@ export default {
       produto_id: item.produto_id,
       quantidade: item.quantidade,
       preco_unitario: item.preco,
-      subtotal: item.subtotal
+      subtotal: item.subtotal,
+      preco_custo: custosMap[item.produto_id] || 0
     }))
 
     await supabase.from('itens_venda_erp').insert(itens)

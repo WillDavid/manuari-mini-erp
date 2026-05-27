@@ -580,12 +580,23 @@ export default {
 
         if (erroVenda) throw erroVenda
 
+        const custosMap = {}
+        for (const item of this.preview?.itensDetalhados || []) {
+          const { data: produto } = await supabase
+            .from('produtos_erp')
+            .select('preco_custo')
+            .eq('id', item.produto_id)
+            .single()
+          custosMap[item.produto_id] = produto?.preco_custo || 0
+        }
+
         const itens = (this.preview?.itensDetalhados || []).map((item) => ({
           venda_id: vendaSalva.id,
           produto_id: item.produto_id,
           quantidade: item.quantidade,
           preco_unitario: item.preco,
           subtotal: item.subtotal,
+          preco_custo: custosMap[item.produto_id] || 0,
         }))
 
         const { error: erroItens } = await supabase
