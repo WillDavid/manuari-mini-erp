@@ -1,19 +1,6 @@
-const CACHE_NAME = 'manuari-erp-v1'
+const CACHE_NAME = 'manuari-erp-v2'
 
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/favicon.svg',
-  '/icons.svg',
-  '/manifest.json',
-]
-
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS)
-    })
-  )
+self.addEventListener('install', () => {
   self.skipWaiting()
 })
 
@@ -34,8 +21,8 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetchPromise = fetch(event.request).then((response) => {
+    fetch(event.request)
+      .then((response) => {
         if (response && response.status === 200) {
           const clone = response.clone()
           caches.open(CACHE_NAME).then((cache) => {
@@ -43,9 +30,7 @@ self.addEventListener('fetch', (event) => {
           })
         }
         return response
-      }).catch(() => cached)
-
-      return cached || fetchPromise
-    })
+      })
+      .catch(() => caches.match(event.request))
   )
 })
