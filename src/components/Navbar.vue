@@ -3,6 +3,7 @@
     <div class="navbar-shell">
       <router-link to="/vendas" class="logo" @click="fecharMenus">
         <img :src="logo" alt="Manuari" />
+        <span class="version">v{{ versao }}</span>
       </router-link>
 
       <nav :class="['nav', { open: menuAberto }]">
@@ -81,6 +82,7 @@
 <script>
 import logo from '../assets/manuari-logotipo-300dpi.png'
 import { supabase } from '../services/supabase'
+import pkg from '../../package.json'
 
 export default {
   data() {
@@ -88,7 +90,8 @@ export default {
       menuAberto: false,
       alertasAbertos: false,
       itensBaixoEstoque: [],
-      logo
+      logo,
+      versao: pkg.version
     }
   },
 
@@ -180,6 +183,15 @@ export default {
 .logo img {
   height: 28px;
   object-fit: contain;
+}
+
+.version {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-left: 8px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .nav {

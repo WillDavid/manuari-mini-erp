@@ -253,6 +253,14 @@ this.$router.push('/identificar')
 
 ---
 
+## 6.4 Versionamento
+
+A versão do sistema é definida em `package.json` no campo `version` (atualmente `"0.0.0"`).
+- A versão é exibida no canto superior esquerdo do Navbar, ao lado do logo, no formato `v0.0.0`.
+- O valor é importado dinamicamente do `package.json` via `Navbar.vue`.
+
+---
+
 ## 7. GERENCIAMENTO DE ESTADO
 
 **Não existe store centralizada.** O estado é gerenciado por:
