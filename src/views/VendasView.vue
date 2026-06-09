@@ -37,6 +37,7 @@
             <th>Total</th>
             <th>Desconto</th>
             <th>Total Final</th>
+            <th>Custo Total</th>
             <th>Pagamento</th>
             <th></th>
           </tr>
@@ -66,6 +67,10 @@
 
             <td data-label="Total Final">
               R$ {{ formatarPreco(v.total_final) }}
+            </td>
+
+            <td data-label="Custo Total">
+              R$ {{ formatarPreco(calcularCustoTotal(v)) }}
             </td>
 
             <td data-label="Pagamento">
@@ -541,6 +546,14 @@ export default {
     alert('Erro ao excluir venda')
   }
 },
+
+    calcularCustoTotal(venda) {
+      if (!venda.itens_venda_erp) return 0
+      return venda.itens_venda_erp.reduce((total, item) => {
+        const custoUnit = item.preco_custo || item.produtos_erp?.preco_custo || 0
+        return total + (item.quantidade * custoUnit)
+      }, 0)
+    },
 
     formatarPreco(valor) {
       if (!valor) return '0,00'

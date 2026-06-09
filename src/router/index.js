@@ -4,6 +4,7 @@ import VendasView from '../views/VendasView.vue'
 import EstoqueView from '../views/EstoqueView.vue'
 import VitrineView from '../views/VitrineView.vue'
 import PdvView from '../views/PdvView.vue'
+import DashboardView from '../views/DashboardView.vue'
 import UserIdentifier from '../components/UserIdentifier.vue'
 
 const routes = [
@@ -13,7 +14,8 @@ const routes = [
   { path: '/vendas', component: VendasView, meta: { requiresAuth: true } },
   { path: '/estoque', component: EstoqueView, meta: { requiresAuth: true } },
   { path: '/vitrine', component: VitrineView, meta: { requiresAuth: true } },
-  { path: '/pdv', component: PdvView, meta: { requiresAuth: true } }
+  { path: '/pdv', component: PdvView, meta: { requiresAuth: true } },
+  { path: '/dashboard', component: DashboardView, meta: { requiresAuth: true } }
 ]
 
 const router = createRouter({

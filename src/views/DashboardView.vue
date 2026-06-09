@@ -1,0 +1,1264 @@
+<template>
+  <div class="page">
+
+    <div class="header">
+      <h3>Dashboard Gerencial</h3>
+      <div class="header-actions">
+        <button class="btn-export" @click="exportarPdf" :disabled="!vendas.length">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+          PDF
+        </button>
+        <button class="btn-export" @click="exportarExcel" :disabled="!vendas.length">
+          Excel
+        </button>
+        <button class="btn-meta" @click="modalMetasAberto = true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+          </svg>
+          Metas
+        </button>
+      </div>
+    </div>
+
+    <!-- FILTROS -->
+    <div class="filtros">
+      <div class="filtro-row">
+        <div class="field">
+          <label>Período</label>
+          <select v-model="periodo" @change="aplicarPeriodo">
+            <option value="hoje">Hoje</option>
+            <option value="ontem">Ontem</option>
+            <option value="7d">Últimos 7 dias</option>
+            <option value="30d">Últimos 30 dias</option>
+            <option value="90d">Últimos 90 dias</option>
+            <option value="mes_atual">Este mês</option>
+            <option value="mes_anterior">Mês anterior</option>
+            <option value="ano_atual">Este ano</option>
+            <option value="personalizado">Personalizado</option>
+          </select>
+        </div>
+
+        <template v-if="periodo === 'personalizado'">
+          <div class="field">
+            <label>Início</label>
+            <input type="date" v-model="dataInicio" />
+          </div>
+          <div class="field">
+            <label>Fim</label>
+            <input type="date" v-model="dataFim" />
+          </div>
+        </template>
+
+        <div class="field">
+          <label>Produto</label>
+          <select v-model="produtoFiltro">
+            <option value="">Todos</option>
+            <option v-for="p in produtos" :key="p.id" :value="p.id">{{ p.nome }}</option>
+          </select>
+        </div>
+
+        <button class="btn-aplicar" @click="aplicarFiltros" :disabled="carregando">
+          {{ carregando ? 'Carregando...' : 'Atualizar' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Faturamento</div>
+        <div class="kpi-value">R$ {{ formatarMoeda(kpis.faturamento) }}</div>
+        <div class="kpi-trend" :class="kpis.crescimentoFaturamento >= 0 ? 'up' : 'down'">
+          {{ kpis.crescimentoFaturamento >= 0 ? '↑' : '↓' }} {{ Math.abs(kpis.crescimentoFaturamento).toFixed(1) }}% vs período anterior
+        </div>
+        <div class="kpi-trend" :class="kpis.crescimentoMesAnterior >= 0 ? 'up' : 'down'">
+          vs mês passado: {{ kpis.crescimentoMesAnterior >= 0 ? '↑' : '↓' }} {{ Math.abs(kpis.crescimentoMesAnterior).toFixed(1) }}%
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Lucro</div>
+        <div class="kpi-value">R$ {{ formatarMoeda(kpis.lucro) }}</div>
+        <div class="kpi-trend subtle">
+          Margem {{ kpis.margemLucro.toFixed(1) }}%
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Qtd. Vendida</div>
+        <div class="kpi-value">{{ kpis.quantidade }}</div>
+        <div class="kpi-trend subtle">unidades</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Pedidos</div>
+        <div class="kpi-value">{{ kpis.pedidos }}</div>
+        <div class="kpi-trend subtle">vendas</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Ticket Médio</div>
+        <div class="kpi-value">R$ {{ formatarMoeda(kpis.ticketMedio) }}</div>
+        <div class="kpi-trend subtle">por pedido</div>
+      </div>
+
+      <div class="kpi-card meta-card">
+        <div class="kpi-label">Meta de Faturamento ({{ mesAtualNome }})</div>
+        <div class="kpi-value">R$ {{ formatarMoeda(metaMesAtual) }}</div>
+        <div class="meta-bar-wrap">
+          <div class="meta-bar" :style="{ width: kpis.atingimentoMeta + '%' }" :class="kpis.atingimentoMeta >= 100 ? 'superado' : ''"></div>
+        </div>
+        <div class="kpi-trend" :class="kpis.atingimentoMeta >= 100 ? 'up' : 'down'">
+          {{ kpis.atingimentoMeta.toFixed(1) }}% atingido
+        </div>
+      </div>
+    </div>
+
+    <!-- RANKINGS -->
+    <div class="rankings-grid">
+      <div class="table-card">
+        <div class="table-title">Ranking de Produtos</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Qtde</th>
+              <th>Receita</th>
+              <th>Lucro</th>
+              <th>Margem</th>
+              <th>% Receita</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="p in rankingProdutos" :key="p.nome" :class="{ destaque: p.nome !== 'Outros' && p.receita === maiorReceita }">
+              <td data-label="Produto">{{ p.nome }}</td>
+              <td data-label="Qtde">{{ p.quantidade }}</td>
+              <td data-label="Receita">R$ {{ formatarMoeda(p.receita) }}</td>
+              <td data-label="Lucro">R$ {{ formatarMoeda(p.lucro) }}</td>
+              <td data-label="Margem">{{ p.margem.toFixed(1) }}%</td>
+              <td data-label="% Receita" class="pct-col">{{ p.pctReceita.toFixed(1) }}%</td>
+            </tr>
+            <tr v-if="!rankingProdutos.length">
+              <td colspan="6" class="empty-cell">Nenhum produto no período</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-card">
+        <div class="table-title">Ranking de Clientes</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Pedidos</th>
+              <th>Receita</th>
+              <th>Ticket Médio</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="c in rankingClientes" :key="c.cliente">
+              <td data-label="Cliente">{{ c.cliente || 'Sem nome' }}</td>
+              <td data-label="Pedidos">{{ c.pedidos }}</td>
+              <td data-label="Receita">R$ {{ formatarMoeda(c.receita) }}</td>
+              <td data-label="Ticket Médio">R$ {{ formatarMoeda(c.ticketMedio) }}</td>
+            </tr>
+            <tr v-if="!rankingClientes.length">
+              <td colspan="4" class="empty-cell">Nenhum cliente no período</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ALERTAS / INSIGHTS -->
+    <div class="alertas-section">
+      <div class="table-title">Insights Automáticos</div>
+      <div class="alertas-list">
+        <div v-for="(insight, i) in insights" :key="i" class="alerta-item" :class="insight.tipo">
+          <span class="alerta-icon">{{ insight.tipo === 'positivo' ? '↑' : insight.tipo === 'negativo' ? '↓' : '•' }}</span>
+          <span class="alerta-texto">{{ insight.texto }}</span>
+        </div>
+        <div v-if="!insights.length" class="alerta-item neutro">
+          <span class="alerta-icon">•</span>
+          <span class="alerta-texto">Nenhum insight disponível para o período selecionado.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL METAS -->
+    <div v-if="modalMetasAberto" class="modal-overlay" @click.self="modalMetasAberto = false">
+      <div class="modal" role="dialog" aria-modal="true" style="max-width: 860px">
+        <div class="modal-header">
+          <h2 class="modal-title">Metas Mensais {{ metas.ano }}</h2>
+          <button class="close-btn" @click="modalMetasAberto = false">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body" style="gap: 8px">
+          <div class="meta-tabs">
+            <button :class="['meta-tab', { active: abaMeta === 'faturamento' }]" @click="abaMeta = 'faturamento'">Meta Faturamento</button>
+            <button :class="['meta-tab', { active: abaMeta === 'lucro' }]" @click="abaMeta = 'lucro'">Meta Lucro</button>
+            <button :class="['meta-tab', { active: abaMeta === 'quantidade' }]" @click="abaMeta = 'quantidade'">Meta Qtd.</button>
+          </div>
+
+          <div class="meta-table-wrap">
+            <table class="meta-table">
+              <thead>
+                <tr>
+                  <th>Mês</th>
+                  <th>Faturamento</th>
+                  <th>Custo</th>
+                  <th>Lucro</th>
+                  <th>Margem</th>
+                  <th>Meta (R$)</th>
+                  <th>% Meta</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(nome, i) in MESES" :key="i" :class="{ atual: (i + 1) === mesAtual }">
+                  <td>{{ nome.substring(0, 3) }}</td>
+                  <td>{{ formatarMoeda(faturamentoPorMes[i + 1]?.realizado || 0) }}</td>
+                  <td>{{ formatarMoeda(faturamentoPorMes[i + 1]?.custo || 0) }}</td>
+                  <td>{{ formatarMoeda((faturamentoPorMes[i + 1]?.realizado || 0) - (faturamentoPorMes[i + 1]?.custo || 0)) }}</td>
+                  <td>{{ (margemPorMes[i + 1] || 0).toFixed(1) }}%</td>
+                  <td>
+                    <input
+                      type="number"
+                      v-model.number="metas[abaMeta][i + 1]"
+                      min="0"
+                      step="0.01"
+                      :placeholder="abaMeta === 'quantidade' ? '0' : '0,00'"
+                    />
+                  </td>
+                  <td :class="atingimentoPorMes[i + 1] >= 100 ? 'up' : 'down'">
+                    {{ (atingimentoPorMes[i + 1] || 0).toFixed(1) }}%
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="export-btn-cancel" @click="modalMetasAberto = false">Cancelar</button>
+          <button class="export-btn-confirm" @click="salvarMetas">Salvar Metas</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</template>
+
+<script>
+import { supabase } from '../services/supabase'
+
+const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+const STORAGE_METAS = 'dashboard_metas'
+
+function hoje() { return new Date().toISOString().split('T')[0] }
+
+function diasAtras(n) {
+  const d = new Date()
+  d.setDate(d.getDate() - n)
+  return d.toISOString().split('T')[0]
+}
+
+function inicioMes(d) {
+  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0]
+}
+
+function fimMes(d) {
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0]
+}
+
+function inicioAno(d) {
+  return new Date(d.getFullYear(), 0, 1).toISOString().split('T')[0]
+}
+
+export default {
+  name: 'DashboardView',
+
+  data() {
+    return {
+      carregando: false,
+      vendas: [],
+      produtos: [],
+      periodo: '30d',
+      produtoFiltro: '',
+      dataInicio: '',
+      dataFim: '',
+
+      metas: {
+        ano: new Date().getFullYear(),
+        faturamento: { 1: '', 2: '', 3: '', 4: '', 5: '', 6: '', 7: '', 8: '', 9: '', 10: '', 11: '', 12: '' },
+        lucro: { 1: '', 2: '', 3: '', 4: '', 5: '', 6: '', 7: '', 8: '', 9: '', 10: '', 11: '', 12: '' },
+        quantidade: { 1: '', 2: '', 3: '', 4: '', 5: '', 6: '', 7: '', 8: '', 9: '', 10: '', 11: '', 12: '' }
+      },
+      modalMetasAberto: false,
+      abaMeta: 'faturamento'
+    }
+  },
+
+  MESES,
+
+  mounted() {
+    this.carregarMetas()
+    this.aplicarPeriodo()
+    this.carregarDados()
+  },
+
+  computed: {
+    mesAtual() {
+      return new Date().getMonth() + 1
+    },
+
+    mesAtualNome() {
+      return MESES[this.mesAtual - 1]
+    },
+
+    metaMesAtual() {
+      return Number(this.metas.faturamento[this.mesAtual]) || 0
+    },
+
+    faturamentoPorMes() {
+      const mapa = {}
+      for (let i = 1; i <= 12; i++) mapa[i] = { meta: Number(this.metas.faturamento[i]) || 0, realizado: 0, custo: 0 }
+      this.vendas.forEach(v => {
+        const data = v.data_venda?.split('T')[0]
+        if (!data) return
+        const mes = new Date(data + 'T12:00:00').getMonth() + 1
+        const ano = new Date(data + 'T12:00:00').getFullYear()
+        if (ano === this.metas.ano) {
+          mapa[mes].realizado += Number(v.total_final || 0)
+          mapa[mes].custo += (v.itens_venda_erp || []).reduce((s, item) =>
+            s + ((item.quantidade || 0) * (item.preco_custo || item.produtos_erp?.preco_custo || 0)), 0)
+        }
+      })
+      return mapa
+    },
+
+    margemPorMes() {
+      const mapa = {}
+      for (let i = 1; i <= 12; i++) {
+        const r = this.faturamentoPorMes[i]?.realizado || 0
+        const c = this.faturamentoPorMes[i]?.custo || 0
+        mapa[i] = r > 0 ? ((r - c) / r) * 100 : 0
+      }
+      return mapa
+    },
+
+    atingimentoPorMes() {
+      const mapa = {}
+      for (let i = 1; i <= 12; i++) {
+        const meta = Number(this.metas.faturamento[i]) || 0
+        const real = this.faturamentoPorMes[i]?.realizado || 0
+        mapa[i] = meta > 0 ? (real / meta) * 100 : 0
+      }
+      return mapa
+    },
+
+    clientes() {
+      const set = new Set()
+      this.vendas.forEach(v => { if (v.cliente) set.add(v.cliente) })
+      return [...set].sort()
+    },
+    vendasFiltradas() {
+      let resultado = [...this.vendas]
+
+      if (this.dataInicio && this.dataFim) {
+        resultado = resultado.filter(v => {
+          const data = v.data_venda?.split('T')[0]
+          return data >= this.dataInicio && data <= this.dataFim
+        })
+      }
+
+      if (this.produtoFiltro) {
+        resultado = resultado.filter(v =>
+          v.itens_venda_erp?.some(i => i.produto_id === this.produtoFiltro)
+        )
+      }
+
+      return resultado
+    },
+
+    periodoAnterior() {
+      if (!this.dataInicio || !this.dataFim) return []
+      const inicio = new Date(this.dataInicio)
+      const fim = new Date(this.dataFim)
+      const duracao = fim - inicio
+      const fimAnterior = new Date(inicio.getTime() - 86400000)
+      const inicioAnterior = new Date(fimAnterior.getTime() - duracao)
+      const iniStr = inicioAnterior.toISOString().split('T')[0]
+      const fimStr = fimAnterior.toISOString().split('T')[0]
+
+      return this.vendas.filter(v => {
+        const data = v.data_venda?.split('T')[0]
+        return data >= iniStr && data <= fimStr
+      })
+    },
+
+    kpis() {
+      const vendas = this.vendasFiltradas
+      const faturamento = vendas.reduce((s, v) => s + (Number(v.total_final) || 0), 0)
+      const custoTotal = vendas.reduce((s, v) =>
+        s + (v.itens_venda_erp || []).reduce((si, item) =>
+          si + ((item.quantidade || 0) * (item.preco_custo || item.produtos_erp?.preco_custo || 0)), 0), 0)
+      const lucro = faturamento - custoTotal
+      const margemLucro = faturamento > 0 ? (lucro / faturamento) * 100 : 0
+      const quantidade = vendas.reduce((s, v) =>
+        s + (v.itens_venda_erp || []).reduce((si, item) => si + (item.quantidade || 0), 0), 0)
+      const pedidos = vendas.length
+      const ticketMedio = pedidos > 0 ? faturamento / pedidos : 0
+
+      const anterior = this.periodoAnterior
+      const faturamentoAnterior = anterior.reduce((s, v) => s + (Number(v.total_final) || 0), 0)
+      const crescimentoFaturamento = faturamentoAnterior > 0
+        ? ((faturamento - faturamentoAnterior) / faturamentoAnterior) * 100
+        : 0
+
+      const mesAtualNum = this.mesAtual
+      const mesPassadoNum = mesAtualNum === 1 ? 12 : mesAtualNum - 1
+      const anoPassado = mesAtualNum === 1 ? this.metas.ano - 1 : this.metas.ano
+
+      const faturamentoMesAtual = this.faturamentoPorMes[mesAtualNum]?.realizado || 0
+      const faturamentoMesPassado = (() => {
+        const vendasMesPassado = this.vendas.filter(v => {
+          const data = v.data_venda?.split('T')[0]
+          if (!data) return false
+          const d = new Date(data + 'T12:00:00')
+          return d.getMonth() + 1 === mesPassadoNum && d.getFullYear() === anoPassado
+        })
+        return vendasMesPassado.reduce((s, v) => s + (Number(v.total_final) || 0), 0)
+      })()
+
+      const crescimentoMesAnterior = faturamentoMesPassado > 0
+        ? ((faturamentoMesAtual - faturamentoMesPassado) / faturamentoMesPassado) * 100
+        : 0
+
+      const metaAtual = this.metaMesAtual
+      const atingimentoMeta = metaAtual > 0
+        ? (faturamentoMesAtual / metaAtual) * 100
+        : 0
+
+      const diasDecorridos = this.dataInicio && this.dataFim
+        ? Math.max(1, Math.ceil((new Date(this.dataFim) - new Date(this.dataInicio)) / 86400000) + 1)
+        : 30
+
+      const projecaoQuantidade = diasDecorridos > 0
+        ? Math.round((quantidade / diasDecorridos) * diasDecorridos)
+        : 0
+
+      const metaQuantidadeMes = Number(this.metas.quantidade[mesAtualNum]) || 0
+      const atingimentoMetaProjecao = metaQuantidadeMes > 0
+        ? (quantidade / metaQuantidadeMes) * 100
+        : 0
+
+      return {
+        faturamento, lucro, margemLucro, quantidade, pedidos, ticketMedio,
+        crescimentoFaturamento, crescimentoMesAnterior, atingimentoMeta, diasDecorridos,
+        projecaoQuantidade, atingimentoMetaProjecao
+      }
+    },
+
+    rankingProdutos() {
+      const mapa = {}
+      this.vendasFiltradas.forEach(v => {
+        (v.itens_venda_erp || []).forEach(item => {
+          const nome = item.produtos_erp?.nome || 'Sem nome'
+          if (!mapa[nome]) mapa[nome] = { nome, quantidade: 0, receita: 0, custo: 0 }
+          const qtd = item.quantidade || 0
+          const sub = Number(item.subtotal || 0)
+          const custo = qtd * (item.preco_custo || item.produtos_erp?.preco_custo || 0)
+          mapa[nome].quantidade += qtd
+          mapa[nome].receita += sub
+          mapa[nome].custo += custo
+        })
+      })
+
+      let lista = Object.values(mapa)
+        .map(p => ({ ...p, lucro: p.receita - p.custo, margem: p.receita > 0 ? ((p.receita - p.custo) / p.receita) * 100 : 0 }))
+        .sort((a, b) => b.receita - a.receita)
+
+      if (lista.length > 10) {
+        const outros = lista.slice(10)
+        const consolidado = {
+          nome: 'Outros',
+          quantidade: outros.reduce((s, p) => s + p.quantidade, 0),
+          receita: outros.reduce((s, p) => s + p.receita, 0),
+          custo: outros.reduce((s, p) => s + p.custo, 0)
+        }
+        consolidado.lucro = consolidado.receita - consolidado.custo
+        consolidado.margem = consolidado.receita > 0 ? (consolidado.lucro / consolidado.receita) * 100 : 0
+        lista = [...lista.slice(0, 10), consolidado]
+      }
+
+      const totalReceita = lista.reduce((s, p) => s + p.receita, 0)
+      lista.forEach(p => {
+        p.pctReceita = totalReceita > 0 ? (p.receita / totalReceita) * 100 : 0
+      })
+
+      return lista
+    },
+
+    rankingClientes() {
+      const mapa = {}
+      this.vendasFiltradas.forEach(v => {
+        const nome = v.cliente || 'Sem nome'
+        if (!mapa[nome]) mapa[nome] = { cliente: nome, pedidos: 0, receita: 0 }
+        mapa[nome].pedidos++
+        mapa[nome].receita += Number(v.total_final || 0)
+      })
+
+      let lista = Object.values(mapa)
+        .map(c => ({ ...c, ticketMedio: c.pedidos > 0 ? c.receita / c.pedidos : 0 }))
+        .sort((a, b) => b.receita - a.receita)
+
+      if (lista.length > 10) {
+        const outros = lista.slice(10)
+        lista = [
+          ...lista.slice(0, 10),
+          {
+            cliente: 'Outros',
+            pedidos: outros.reduce((s, c) => s + c.pedidos, 0),
+            receita: outros.reduce((s, c) => s + c.receita, 0),
+            ticketMedio: 0
+          }
+        ]
+        const ultimo = lista[10]
+        ultimo.ticketMedio = ultimo.pedidos > 0 ? ultimo.receita / ultimo.pedidos : 0
+      }
+
+      return lista
+    },
+
+    maiorReceita() {
+      const normais = this.rankingProdutos.filter(p => p.nome !== 'Outros')
+      return normais.length ? Math.max(...normais.map(p => p.receita)) : 0
+    },
+
+    insights() {
+      const lista = []
+      const { faturamento, lucro, margemLucro, quantidade, pedidos, crescimentoFaturamento, atingimentoMeta } = this.kpis
+
+      if (this.vendasFiltradas.length === 0) return lista
+
+      const metaAtual = this.metaMesAtual
+      if (metaAtual > 0) {
+        if (atingimentoMeta >= 100) {
+          lista.push({ tipo: 'positivo', texto: `Meta de faturamento de ${this.mesAtualNome} atingida! ${atingimentoMeta.toFixed(1)}% da meta de R$ ${this.formatarMoeda(metaAtual)}.` })
+        } else if (atingimentoMeta >= 75) {
+          lista.push({ tipo: 'info', texto: `Faturamento de ${this.mesAtualNome} em ${atingimentoMeta.toFixed(1)}% da meta. Faltam R$ ${this.formatarMoeda(metaAtual - this.faturamentoPorMes[this.mesAtual]?.realizado || 0)} para atingir.` })
+        } else {
+          lista.push({ tipo: 'negativo', texto: `Faturamento de ${this.mesAtualNome} em apenas ${atingimentoMeta.toFixed(1)}% da meta. Necessário acelerar as vendas.` })
+        }
+      }
+
+      if (crescimentoFaturamento > 20) {
+        lista.push({ tipo: 'positivo', texto: `Faturamento cresceu ${crescimentoFaturamento.toFixed(1)}% em relação ao período anterior.` })
+      } else if (crescimentoFaturamento < -20) {
+        lista.push({ tipo: 'negativo', texto: `Faturamento caiu ${Math.abs(crescimentoFaturamento).toFixed(1)}% em relação ao período anterior. Atenção!` })
+      }
+
+      if (margemLucro > 50) {
+        lista.push({ tipo: 'positivo', texto: `Margem de lucro está excelente: ${margemLucro.toFixed(1)}%.` })
+      } else if (margemLucro < 20 && faturamento > 0) {
+        lista.push({ tipo: 'negativo', texto: `Margem de lucro baixa: ${margemLucro.toFixed(1)}%. Verifique os custos.` })
+      }
+
+      const top = this.rankingProdutos[0]
+      if (top && top.receita > 0 && faturamento > 0) {
+        const participacao = (top.receita / faturamento) * 100
+        if (participacao > 50) {
+          lista.push({ tipo: 'info', texto: `"${top.nome}" representa ${participacao.toFixed(1)}% do faturamento.` })
+        }
+      }
+
+      const produtosSemVenda = this.produtos.filter(p => {
+        return !this.vendasFiltradas.some(v =>
+          (v.itens_venda_erp || []).some(i => i.produto_id === p.id)
+        )
+      })
+      if (produtosSemVenda.length > 0 && produtosSemVenda.length <= 3) {
+        lista.push({ tipo: 'negativo', texto: `Produtos sem venda no período: ${produtosSemVenda.map(p => p.nome).join(', ')}.` })
+      } else if (produtosSemVenda.length > 3) {
+        lista.push({ tipo: 'negativo', texto: `${produtosSemVenda.length} produtos sem venda no período. Considere promoções.` })
+      }
+
+      return lista
+    }
+  },
+
+  methods: {
+    async carregarDados() {
+      this.carregando = true
+      try {
+        const dataLimite = this.dataInicio || diasAtras(365)
+        const fimLimite = this.dataFim || hoje()
+
+        const [vRes, pRes] = await Promise.all([
+          supabase.from('vendas_erp').select(`
+            id, data_venda, cliente, total_bruto, desconto, total_final, forma_pagamento,
+            itens_venda_erp (id, produto_id, quantidade, preco_unitario, preco_custo, subtotal, produtos_erp (nome, preco_custo))
+          `).gte('data_venda', dataLimite + 'T00:00:00').lte('data_venda', fimLimite + 'T23:59:59').order('data_venda', { ascending: true }),
+          supabase.from('produtos_erp').select('*').order('nome')
+        ])
+
+        this.vendas = vRes.data || []
+        this.produtos = pRes.data || []
+      } catch (e) {
+        console.error(e)
+      } finally {
+        this.carregando = false
+      }
+    },
+
+    aplicarPeriodo() {
+      const hojeStr = hoje()
+      switch (this.periodo) {
+        case 'hoje':
+          this.dataInicio = hojeStr
+          this.dataFim = hojeStr
+          break
+        case 'ontem':
+          this.dataInicio = diasAtras(1)
+          this.dataFim = diasAtras(1)
+          break
+        case '7d':
+          this.dataInicio = diasAtras(7)
+          this.dataFim = hojeStr
+          break
+        case '30d':
+          this.dataInicio = diasAtras(30)
+          this.dataFim = hojeStr
+          break
+        case '90d':
+          this.dataInicio = diasAtras(90)
+          this.dataFim = hojeStr
+          break
+        case 'mes_atual':
+          this.dataInicio = inicioMes(new Date())
+          this.dataFim = hojeStr
+          break
+        case 'mes_anterior':
+          const mesAnterior = new Date()
+          mesAnterior.setMonth(mesAnterior.getMonth() - 1)
+          this.dataInicio = inicioMes(mesAnterior)
+          this.dataFim = fimMes(mesAnterior)
+          break
+        case 'ano_atual':
+          this.dataInicio = inicioAno(new Date())
+          this.dataFim = hojeStr
+          break
+        case 'personalizado':
+          break
+      }
+      if (this.periodo !== 'personalizado') {
+        this.carregarDados()
+      }
+    },
+
+    aplicarFiltros() {
+      this.carregarDados()
+    },
+
+    carregarMetas() {
+      try {
+        const raw = localStorage.getItem(STORAGE_METAS)
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          if (parsed.faturamento && typeof parsed.faturamento === 'object') {
+            this.metas = { ...this.metas, ...parsed }
+            if (!this.metas.ano) this.metas.ano = new Date().getFullYear()
+          } else {
+            const ano = parsed.ano || new Date().getFullYear()
+            const fatVal = Number(parsed.faturamento) || 0
+            const lucVal = Number(parsed.lucro) || 0
+            const qtdVal = Number(parsed.quantidade) || 0
+            this.metas.ano = ano
+            for (let i = 1; i <= 12; i++) {
+              this.metas.faturamento[i] = fatVal
+              this.metas.lucro[i] = lucVal
+              this.metas.quantidade[i] = qtdVal
+            }
+          }
+        }
+      } catch (e) { /* ignora */ }
+    },
+
+    salvarMetas() {
+      localStorage.setItem(STORAGE_METAS, JSON.stringify({
+        ano: this.metas.ano,
+        faturamento: { ...this.metas.faturamento },
+        lucro: { ...this.metas.lucro },
+        quantidade: { ...this.metas.quantidade }
+      }))
+      this.modalMetasAberto = false
+    },
+
+    salvarMetasSilencioso() {
+      localStorage.setItem(STORAGE_METAS, JSON.stringify({
+        ano: this.metas.ano,
+        faturamento: { ...this.metas.faturamento },
+        lucro: { ...this.metas.lucro },
+        quantidade: { ...this.metas.quantidade }
+      }))
+    },
+
+    formatarMoeda(valor) {
+      if (!valor) return '0,00'
+      return Number(valor).toFixed(2).replace('.', ',')
+    },
+
+    async exportarPdf() {
+      try {
+        const { default: jsPDF } = await import('jspdf')
+        await import('jspdf-autotable')
+        const doc = new jsPDF({ orientation: 'landscape' })
+        doc.setFontSize(16)
+        doc.text('Dashboard Gerencial — Relatório', 14, 20)
+        doc.setFontSize(10)
+        doc.setTextColor(100, 100, 100)
+        doc.text(`Período: ${this.dataInicio.split('-').reverse().join('/')} a ${this.dataFim.split('-').reverse().join('/')}`, 14, 28)
+
+        const colunas = ['Produto', 'Qtde', 'Receita', 'Lucro', 'Margem']
+        const linhas = this.rankingProdutos.map(p => [p.nome, p.quantidade, 'R$ ' + this.formatarMoeda(p.receita), 'R$ ' + this.formatarMoeda(p.lucro), p.margem.toFixed(1) + '%'])
+
+        doc.autoTable({
+          head: [colunas],
+          body: linhas,
+          startY: 34,
+          theme: 'grid',
+          styles: { fontSize: 9 },
+          headStyles: { fillColor: [232, 110, 26] }
+        })
+
+        const finalY = doc.lastAutoTable?.finalY || 34
+        doc.setFontSize(9)
+        doc.setTextColor(80, 80, 80)
+        doc.text(`Faturamento: R$ ${this.formatarMoeda(this.kpis.faturamento)} | Lucro: R$ ${this.formatarMoeda(this.kpis.lucro)} | Pedidos: ${this.kpis.pedidos}`, 14, finalY + 10)
+
+        doc.save('dashboard.pdf')
+      } catch (e) {
+        console.error(e)
+        alert('Erro ao exportar PDF')
+      }
+    },
+
+    async exportarExcel() {
+      try {
+        const { default: XLSX } = await import('xlsx')
+        const dados = this.rankingProdutos.map(p => ({
+          Produto: p.nome,
+          Quantidade: p.quantidade,
+          Receita: Number(p.receita.toFixed(2)),
+          Lucro: Number(p.lucro.toFixed(2)),
+          Margem: Number(p.margem.toFixed(1))
+        }))
+
+        const wb = XLSX.utils.book_new()
+        const ws = XLSX.utils.json_to_sheet(dados)
+        XLSX.utils.book_append_sheet(wb, ws, 'Ranking')
+        XLSX.writeFile(wb, 'dashboard.xlsx')
+      } catch (e) {
+        console.error(e)
+        alert('Erro ao exportar Excel')
+      }
+    }
+  },
+
+  watch: {
+    periodo() {
+      this.aplicarPeriodo()
+    },
+    dataInicio() {
+      if (this.periodo === 'personalizado') this.carregarDados()
+    },
+    dataFim() {
+      if (this.periodo === 'personalizado') this.carregarDados()
+    },
+    produtoFiltro() { this.aplicarFiltros() }
+  }
+}
+</script>
+
+<style scoped>
+.page {
+  padding: 20px 20px 32px;
+  max-width: 1520px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.header h3 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  flex-shrink: 0;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-export, .btn-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.btn-export:hover:not(:disabled), .btn-meta:hover:not(:disabled) {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.btn-export:disabled, .btn-meta:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.filtros {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.filtro-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.filtro-row .field {
+  flex: 1;
+  min-width: 140px;
+}
+
+.filtro-row .field label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.btn-aplicar {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-aplicar:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.btn-aplicar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* KPIs */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+
+.kpi-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.kpi-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  font-feature-settings: 'tnum' 1;
+}
+
+.kpi-trend {
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.kpi-trend.up { color: var(--success); }
+.kpi-trend.down { color: var(--danger); }
+.kpi-trend.subtle { color: var(--text-muted); font-weight: 500; }
+
+.meta-bar-wrap {
+  height: 6px;
+  background: var(--surface-muted);
+  border-radius: 3px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.meta-bar {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+  min-width: 2px;
+}
+
+.meta-bar.superado {
+  background: var(--success);
+}
+
+/* Rankings */
+.rankings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.table-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+}
+
+.table-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.table-card table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table-card thead th {
+  background: #F1F5F9;
+  text-align: left;
+  padding: 8px 14px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.table-card tbody tr:nth-child(even) {
+  background: rgba(241,245,249,0.55);
+}
+
+.table-card tbody tr:hover {
+  background: rgba(232,110,26,0.04);
+}
+
+.table-card td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  font-feature-settings: 'tnum' 1;
+}
+
+.table-card tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.empty-cell {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 24px !important;
+}
+
+tr.destaque td:first-child {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.pct-col { text-align: right; }
+
+.meta-input {
+  width: 100%;
+  height: 30px;
+  min-width: 90px;
+}
+
+td.up { color: var(--success); font-weight: 600; }
+td.down { color: var(--danger); font-weight: 600; }
+
+tr.atual td:first-child { color: var(--primary); }
+
+/* Alertas */
+.alertas-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+}
+
+.alertas-list {
+  padding: 8px 16px 14px;
+}
+
+.alerta-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--surface-muted);
+  font-size: 13px;
+}
+
+.alerta-item:last-child {
+  border-bottom: none;
+}
+
+.alerta-icon {
+  font-size: 16px;
+  font-weight: 700;
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+}
+
+.alerta-item.positivo .alerta-icon { color: var(--success); }
+.alerta-item.negativo .alerta-icon { color: var(--danger); }
+.alerta-item.info .alerta-icon { color: var(--info); }
+.alerta-item.neutro .alerta-icon { color: var(--text-muted); }
+
+.alerta-texto {
+  color: var(--text);
+}
+
+/* Modal Metas */
+:deep(.modal-overlay) {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(15, 23, 42, 0.48);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+
+:deep(.modal) {
+  background: var(--surface);
+  width: 100%; max-width: 420px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  max-height: calc(100vh - 32px);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+:deep(.modal-header) {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0; gap: 12px;
+}
+
+:deep(.modal-title) { font-size: 18px; font-weight: 600; margin: 0; }
+
+:deep(.close-btn) {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; flex-shrink: 0;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface-soft); color: var(--text-muted);
+  cursor: pointer; transition: all 0.15s;
+}
+
+:deep(.close-btn:hover) { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
+
+:deep(.modal-body) { padding: 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px; }
+
+:deep(.modal-footer) { display: flex; gap: 8px; padding: 16px 20px; border-top: 1px solid var(--border); flex-shrink: 0; justify-content: flex-end; }
+
+:deep(.export-btn-cancel) {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0 16px; height: 36px;
+  border-radius: var(--radius-sm); border: 1px solid var(--border);
+  background: var(--surface); color: var(--text);
+  cursor: pointer; font-weight: 600; font-size: 13px;
+  transition: all 0.15s; white-space: nowrap;
+}
+
+:deep(.export-btn-cancel:hover) { background: var(--surface-soft); }
+
+:deep(.export-btn-confirm) {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0 16px; height: 36px;
+  border-radius: var(--radius-sm); border: 1px solid var(--primary);
+  background: var(--primary); color: white;
+  cursor: pointer; font-weight: 600; font-size: 13px;
+  transition: all 0.15s; white-space: nowrap;
+}
+
+:deep(.export-btn-confirm:hover) { filter: brightness(1.1); }
+
+.meta-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+
+.meta-tab {
+  flex: 1;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  padding: 0 8px;
+  transition: all 0.15s;
+}
+
+.meta-tab:hover { color: var(--text); }
+.meta-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+.meta-table-wrap { max-height: 320px; overflow-y: auto; }
+
+.meta-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.meta-table th {
+  text-align: left;
+  padding: 6px 8px;
+  background: #F1F5F9;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.meta-table td { padding: 4px 8px; border-bottom: 1px solid var(--surface-muted); font-feature-settings: 'tnum' 1; }
+.meta-table td:first-child { font-weight: 600; color: var(--text); }
+.meta-table tr.atual td:first-child { color: var(--primary); }
+.meta-table input { height: 28px; width: 100%; min-width: 80px; }
+.meta-table td.up { color: var(--success); font-weight: 600; }
+.meta-table td.down { color: var(--danger); font-weight: 600; }
+
+.export-desc {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Responsivo */
+@media (max-width: 1200px) {
+  .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+  .rankings-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .page { padding: 16px 12px 24px; }
+  .header { flex-direction: column; align-items: stretch; }
+  .header h3 { font-size: 20px; }
+  .header-actions { width: 100%; flex-direction: column; }
+  .btn-export, .btn-meta { width: 100%; justify-content: center; height: 44px; font-size: 14px; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .kpi-value { font-size: 18px; }
+  .rankings-grid { grid-template-columns: 1fr; }
+  .filtro-row { flex-direction: column; }
+  .filtro-row .field { min-width: 100%; }
+  .btn-aplicar { width: 100%; height: 44px; font-size: 14px; }
+
+  .table-card table, .table-card thead, .table-card tbody, .table-card th, .table-card td, .table-card tr { display: block; }
+  .table-card thead { display: none; }
+  .table-card tbody tr {
+    background: var(--surface);
+    margin-bottom: 8px;
+    border-radius: var(--radius-md);
+    padding: 12px;
+    border: 1px solid var(--border);
+  }
+  .table-card td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 4px;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .table-card td:last-child { border-bottom: none; }
+  .table-card td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    flex-shrink: 0;
+  }
+}
+</style>

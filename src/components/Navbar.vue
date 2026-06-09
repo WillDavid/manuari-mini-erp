@@ -11,6 +11,10 @@
           PDV
         </router-link>
 
+        <router-link to="/dashboard" class="link" active-class="active" @click="fecharMenus">
+          Dashboard
+        </router-link>
+
         <router-link to="/vendas" class="link" active-class="active" @click="fecharMenus">
           Vendas
         </router-link>
