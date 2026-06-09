@@ -25,27 +25,19 @@
         <span class="meta-label">Faturamento</span>
         <span class="meta-valor">R$ {{ formatarMoeda(faturamento) }}</span>
       </div>
+
+      <div class="meta-separador"></div>
+
       <div class="meta-linha">
-        <span class="meta-label">Custo</span>
-        <span class="meta-valor meta-custo">R$ {{ formatarMoeda(custo) }}</span>
-      </div>
-      <div class="meta-linha">
-        <span class="meta-label">Lucro</span>
-        <span class="meta-valor" :class="lucro >= 0 ? 'meta-lucro' : 'meta-prejuizo'">R$ {{ formatarMoeda(lucro) }}</span>
-      </div>
-      <div class="meta-linha">
-        <span class="meta-label">Meta</span>
-        <span class="meta-valor meta-destaque">R$ 6.000,00</span>
+        <span class="meta-label">Meta R$ 5.500,00</span>
+        <span class="meta-pct-inline">{{ Math.min(porcentagem, 100).toFixed(1) }}%</span>
       </div>
       <div class="meta-bar-wrap">
         <div class="meta-bar-fill" :style="{ width: porcentagem + '%' }" :class="{ superado: porcentagem >= 100 }"></div>
       </div>
-      <div class="meta-pct">{{ Math.min(porcentagem, 100).toFixed(1) }}%</div>
-      <div class="meta-falta" v-if="porcentagem < 100">
-        Faltam R$ {{ formatarMoeda(meta - faturamento) }}
-      </div>
-      <div class="meta-falta superado" v-else>
-        Meta superada em R$ {{ formatarMoeda(faturamento - meta) }}
+      <div class="meta-falta" :class="porcentagem >= 100 ? 'superado' : ''">
+        <template v-if="porcentagem < 100">Faltam R$ {{ formatarMoeda(5500 - faturamento) }}</template>
+        <template v-else>Superado em R$ {{ formatarMoeda(faturamento - 5500) }}</template>
       </div>
     </div>
   </div>
@@ -56,7 +48,6 @@ import { supabase } from '../services/supabase'
 
 const STORAGE_POS = 'floating_meta_pos'
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
-const META = 6000
 
 export default {
   name: 'FloatingMeta',
@@ -66,7 +57,6 @@ export default {
     return {
       visivel: true,
       faturamento: 0,
-      custo: 0,
       arrastando: false,
       posX: saved.x,
       posY: saved.y,
@@ -82,12 +72,8 @@ export default {
     estiloPosicao() {
       return { left: this.posX + 'px', top: this.posY + 'px' }
     },
-    meta() { return META },
-    lucro() {
-      return this.faturamento - this.custo
-    },
     porcentagem() {
-      return this.meta > 0 ? (this.faturamento / this.meta) * 100 : 0
+      return this.faturamento > 0 ? (this.faturamento / 5500) * 100 : 0
     },
     mesAtual() {
       const agora = new Date()
@@ -124,22 +110,13 @@ export default {
 
       const { data, error } = await supabase
         .from('vendas_erp')
-        .select(`
-          total_final,
-          itens_venda_erp (
-            quantidade, preco_custo, produtos_erp (preco_custo)
-          )
-        `)
+        .select('total_final')
         .gte('data_venda', inicio + 'T00:00:00')
         .lte('data_venda', fim + 'T23:59:59')
 
       if (error) { console.error(error); return }
 
-      const vendas = data || []
-      this.faturamento = vendas.reduce((s, v) => s + (Number(v.total_final) || 0), 0)
-      this.custo = vendas.reduce((s, v) =>
-        s + (v.itens_venda_erp || []).reduce((si, item) =>
-          si + ((item.quantidade || 0) * (item.preco_custo || item.produtos_erp?.preco_custo || 0)), 0), 0)
+      this.faturamento = (data || []).reduce((s, v) => s + (Number(v.total_final) || 0), 0)
     },
 
     iniciarArrasto(e) {
@@ -220,7 +197,7 @@ export default {
   border: 1.5px solid var(--primary);
   border-radius: var(--radius-lg);
   box-shadow: 0 8px 32px rgba(232, 110, 26, 0.2), var(--shadow-md);
-  width: 190px;
+  width: 200px;
   user-select: none;
   overflow: hidden;
   font-family: 'Inter', sans-serif;
@@ -306,21 +283,28 @@ export default {
   font-feature-settings: 'tnum' 1;
 }
 
-.meta-destaque {
-  color: var(--primary);
-  font-size: 13px;
+.meta-separador {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 0;
 }
 
-.meta-custo {
-  color: var(--danger);
+.meta-falta {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-top: 2px;
 }
 
-.meta-lucro {
+.meta-falta.superado {
   color: var(--success);
 }
 
-.meta-prejuizo {
-  color: var(--danger);
+.meta-pct-inline {
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--text);
+  font-feature-settings: 'tnum' 1;
 }
 
 .meta-bar-wrap {
@@ -344,24 +328,5 @@ export default {
   background: var(--success);
 }
 
-.meta-pct {
-  text-align: center;
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--text);
-  margin-top: 3px;
-  font-feature-settings: 'tnum' 1;
-}
 
-.meta-falta {
-  text-align: center;
-  font-size: 10px;
-  color: var(--text-muted);
-  margin-top: 2px;
-  font-weight: 600;
-}
-
-.meta-falta.superado {
-  color: var(--success);
-}
 </style>
