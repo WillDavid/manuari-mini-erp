@@ -26,6 +26,14 @@
         <span class="meta-valor">R$ {{ formatarMoeda(faturamento) }}</span>
       </div>
       <div class="meta-linha">
+        <span class="meta-label">Custo</span>
+        <span class="meta-valor meta-custo">R$ {{ formatarMoeda(custo) }}</span>
+      </div>
+      <div class="meta-linha">
+        <span class="meta-label">Lucro</span>
+        <span class="meta-valor" :class="lucro >= 0 ? 'meta-lucro' : 'meta-prejuizo'">R$ {{ formatarMoeda(lucro) }}</span>
+      </div>
+      <div class="meta-linha">
         <span class="meta-label">Meta</span>
         <span class="meta-valor meta-destaque">R$ 6.000,00</span>
       </div>
@@ -58,6 +66,7 @@ export default {
     return {
       visivel: true,
       faturamento: 0,
+      custo: 0,
       arrastando: false,
       posX: saved.x,
       posY: saved.y,
@@ -74,6 +83,9 @@ export default {
       return { left: this.posX + 'px', top: this.posY + 'px' }
     },
     meta() { return META },
+    lucro() {
+      return this.faturamento - this.custo
+    },
     porcentagem() {
       return this.meta > 0 ? (this.faturamento / this.meta) * 100 : 0
     },
@@ -112,13 +124,22 @@ export default {
 
       const { data, error } = await supabase
         .from('vendas_erp')
-        .select('total_final')
+        .select(`
+          total_final,
+          itens_venda_erp (
+            quantidade, preco_custo, produtos_erp (preco_custo)
+          )
+        `)
         .gte('data_venda', inicio + 'T00:00:00')
         .lte('data_venda', fim + 'T23:59:59')
 
       if (error) { console.error(error); return }
 
-      this.faturamento = (data || []).reduce((s, v) => s + (Number(v.total_final) || 0), 0)
+      const vendas = data || []
+      this.faturamento = vendas.reduce((s, v) => s + (Number(v.total_final) || 0), 0)
+      this.custo = vendas.reduce((s, v) =>
+        s + (v.itens_venda_erp || []).reduce((si, item) =>
+          si + ((item.quantidade || 0) * (item.preco_custo || item.produtos_erp?.preco_custo || 0)), 0), 0)
     },
 
     iniciarArrasto(e) {
@@ -288,6 +309,18 @@ export default {
 .meta-destaque {
   color: var(--primary);
   font-size: 13px;
+}
+
+.meta-custo {
+  color: var(--danger);
+}
+
+.meta-lucro {
+  color: var(--success);
+}
+
+.meta-prejuizo {
+  color: var(--danger);
 }
 
 .meta-bar-wrap {
