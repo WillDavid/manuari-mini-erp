@@ -15,12 +15,7 @@
         <button class="btn-export" @click="exportarExcel" :disabled="!vendas.length">
           Excel
         </button>
-        <button class="btn-meta" @click="modalMetasAberto = true">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
-          </svg>
-          Metas
-        </button>
+
       </div>
     </div>
 
@@ -106,16 +101,6 @@
         <div class="kpi-trend subtle">por pedido</div>
       </div>
 
-      <div class="kpi-card meta-card">
-        <div class="kpi-label">Meta de Faturamento ({{ mesAtualNome }})</div>
-        <div class="kpi-value">R$ {{ formatarMoeda(metaMesAtual) }}</div>
-        <div class="meta-bar-wrap">
-          <div class="meta-bar" :style="{ width: kpis.atingimentoMeta + '%' }" :class="kpis.atingimentoMeta >= 100 ? 'superado' : ''"></div>
-        </div>
-        <div class="kpi-trend" :class="kpis.atingimentoMeta >= 100 ? 'up' : 'down'">
-          {{ kpis.atingimentoMeta.toFixed(1) }}% atingido
-        </div>
-      </div>
     </div>
 
     <!-- RANKINGS -->
@@ -190,68 +175,6 @@
       </div>
     </div>
 
-    <!-- MODAL METAS -->
-    <div v-if="modalMetasAberto" class="modal-overlay" @click.self="modalMetasAberto = false">
-      <div class="modal" role="dialog" aria-modal="true" style="max-width: 860px">
-        <div class="modal-header">
-          <h2 class="modal-title">Metas Mensais {{ metas.ano }}</h2>
-          <button class="close-btn" @click="modalMetasAberto = false">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </div>
-        <div class="modal-body" style="gap: 8px">
-          <div class="meta-tabs">
-            <button :class="['meta-tab', { active: abaMeta === 'faturamento' }]" @click="abaMeta = 'faturamento'">Meta Faturamento</button>
-            <button :class="['meta-tab', { active: abaMeta === 'lucro' }]" @click="abaMeta = 'lucro'">Meta Lucro</button>
-            <button :class="['meta-tab', { active: abaMeta === 'quantidade' }]" @click="abaMeta = 'quantidade'">Meta Qtd.</button>
-          </div>
-
-          <div class="meta-table-wrap">
-            <table class="meta-table">
-              <thead>
-                <tr>
-                  <th>Mês</th>
-                  <th>Faturamento</th>
-                  <th>Custo</th>
-                  <th>Lucro</th>
-                  <th>Margem</th>
-                  <th>Meta (R$)</th>
-                  <th>% Meta</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(nome, i) in MESES" :key="i" :class="{ atual: (i + 1) === mesAtual }">
-                  <td>{{ nome.substring(0, 3) }}</td>
-                  <td>{{ formatarMoeda(faturamentoPorMes[i + 1]?.realizado || 0) }}</td>
-                  <td>{{ formatarMoeda(faturamentoPorMes[i + 1]?.custo || 0) }}</td>
-                  <td>{{ formatarMoeda((faturamentoPorMes[i + 1]?.realizado || 0) - (faturamentoPorMes[i + 1]?.custo || 0)) }}</td>
-                  <td>{{ (margemPorMes[i + 1] || 0).toFixed(1) }}%</td>
-                  <td>
-                    <input
-                      type="number"
-                      v-model.number="metas[abaMeta][i + 1]"
-                      min="0"
-                      step="0.01"
-                      :placeholder="abaMeta === 'quantidade' ? '0' : '0,00'"
-                    />
-                  </td>
-                  <td :class="atingimentoPorMes[i + 1] >= 100 ? 'up' : 'down'">
-                    {{ (atingimentoPorMes[i + 1] || 0).toFixed(1) }}%
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="export-btn-cancel" @click="modalMetasAberto = false">Cancelar</button>
-          <button class="export-btn-confirm" @click="salvarMetas">Salvar Metas</button>
-        </div>
-      </div>
-    </div>
-
   </div>
 </template>
 
@@ -259,7 +182,6 @@
 import { supabase } from '../services/supabase'
 
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
-const STORAGE_METAS = 'dashboard_metas'
 
 function hoje() { return new Date().toISOString().split('T')[0] }
 
@@ -292,23 +214,13 @@ export default {
       periodo: '30d',
       produtoFiltro: '',
       dataInicio: '',
-      dataFim: '',
-
-      metas: {
-        ano: new Date().getFullYear(),
-        faturamento: { 1: '', 2: '', 3: '', 4: '', 5: '', 6: '', 7: '', 8: '', 9: '', 10: '', 11: '', 12: '' },
-        lucro: { 1: '', 2: '', 3: '', 4: '', 5: '', 6: '', 7: '', 8: '', 9: '', 10: '', 11: '', 12: '' },
-        quantidade: { 1: '', 2: '', 3: '', 4: '', 5: '', 6: '', 7: '', 8: '', 9: '', 10: '', 11: '', 12: '' }
-      },
-      modalMetasAberto: false,
-      abaMeta: 'faturamento'
+      dataFim: ''
     }
   },
 
   MESES,
 
   mounted() {
-    this.carregarMetas()
     this.aplicarPeriodo()
     this.carregarDados()
   },
@@ -318,23 +230,16 @@ export default {
       return new Date().getMonth() + 1
     },
 
-    mesAtualNome() {
-      return MESES[this.mesAtual - 1]
-    },
-
-    metaMesAtual() {
-      return Number(this.metas.faturamento[this.mesAtual]) || 0
-    },
-
     faturamentoPorMes() {
       const mapa = {}
-      for (let i = 1; i <= 12; i++) mapa[i] = { meta: Number(this.metas.faturamento[i]) || 0, realizado: 0, custo: 0 }
+      const anoAtual = new Date().getFullYear()
+      for (let i = 1; i <= 12; i++) mapa[i] = { realizado: 0, custo: 0 }
       this.vendas.forEach(v => {
         const data = v.data_venda?.split('T')[0]
         if (!data) return
         const mes = new Date(data + 'T12:00:00').getMonth() + 1
         const ano = new Date(data + 'T12:00:00').getFullYear()
-        if (ano === this.metas.ano) {
+        if (ano === anoAtual) {
           mapa[mes].realizado += Number(v.total_final || 0)
           mapa[mes].custo += (v.itens_venda_erp || []).reduce((s, item) =>
             s + ((item.quantidade || 0) * (item.preco_custo || item.produtos_erp?.preco_custo || 0)), 0)
@@ -349,16 +254,6 @@ export default {
         const r = this.faturamentoPorMes[i]?.realizado || 0
         const c = this.faturamentoPorMes[i]?.custo || 0
         mapa[i] = r > 0 ? ((r - c) / r) * 100 : 0
-      }
-      return mapa
-    },
-
-    atingimentoPorMes() {
-      const mapa = {}
-      for (let i = 1; i <= 12; i++) {
-        const meta = Number(this.metas.faturamento[i]) || 0
-        const real = this.faturamentoPorMes[i]?.realizado || 0
-        mapa[i] = meta > 0 ? (real / meta) * 100 : 0
       }
       return mapa
     },
@@ -424,9 +319,9 @@ export default {
 
       const mesAtualNum = this.mesAtual
       const mesPassadoNum = mesAtualNum === 1 ? 12 : mesAtualNum - 1
-      const anoPassado = mesAtualNum === 1 ? this.metas.ano - 1 : this.metas.ano
+      const anoAtual = new Date().getFullYear()
+      const anoPassado = mesAtualNum === 1 ? anoAtual - 1 : anoAtual
 
-      const faturamentoMesAtual = this.faturamentoPorMes[mesAtualNum]?.realizado || 0
       const faturamentoMesPassado = (() => {
         const vendasMesPassado = this.vendas.filter(v => {
           const data = v.data_venda?.split('T')[0]
@@ -438,31 +333,16 @@ export default {
       })()
 
       const crescimentoMesAnterior = faturamentoMesPassado > 0
-        ? ((faturamentoMesAtual - faturamentoMesPassado) / faturamentoMesPassado) * 100
-        : 0
-
-      const metaAtual = this.metaMesAtual
-      const atingimentoMeta = metaAtual > 0
-        ? (faturamentoMesAtual / metaAtual) * 100
+        ? ((this.faturamentoPorMes[mesAtualNum]?.realizado || 0) - faturamentoMesPassado) / faturamentoMesPassado * 100
         : 0
 
       const diasDecorridos = this.dataInicio && this.dataFim
         ? Math.max(1, Math.ceil((new Date(this.dataFim) - new Date(this.dataInicio)) / 86400000) + 1)
         : 30
 
-      const projecaoQuantidade = diasDecorridos > 0
-        ? Math.round((quantidade / diasDecorridos) * diasDecorridos)
-        : 0
-
-      const metaQuantidadeMes = Number(this.metas.quantidade[mesAtualNum]) || 0
-      const atingimentoMetaProjecao = metaQuantidadeMes > 0
-        ? (quantidade / metaQuantidadeMes) * 100
-        : 0
-
       return {
         faturamento, lucro, margemLucro, quantidade, pedidos, ticketMedio,
-        crescimentoFaturamento, crescimentoMesAnterior, atingimentoMeta, diasDecorridos,
-        projecaoQuantidade, atingimentoMetaProjecao
+        crescimentoFaturamento, crescimentoMesAnterior
       }
     },
 
@@ -544,20 +424,9 @@ export default {
 
     insights() {
       const lista = []
-      const { faturamento, lucro, margemLucro, quantidade, pedidos, crescimentoFaturamento, atingimentoMeta } = this.kpis
+      const { faturamento, lucro, margemLucro, quantidade, pedidos, crescimentoFaturamento } = this.kpis
 
       if (this.vendasFiltradas.length === 0) return lista
-
-      const metaAtual = this.metaMesAtual
-      if (metaAtual > 0) {
-        if (atingimentoMeta >= 100) {
-          lista.push({ tipo: 'positivo', texto: `Meta de faturamento de ${this.mesAtualNome} atingida! ${atingimentoMeta.toFixed(1)}% da meta de R$ ${this.formatarMoeda(metaAtual)}.` })
-        } else if (atingimentoMeta >= 75) {
-          lista.push({ tipo: 'info', texto: `Faturamento de ${this.mesAtualNome} em ${atingimentoMeta.toFixed(1)}% da meta. Faltam R$ ${this.formatarMoeda(metaAtual - this.faturamentoPorMes[this.mesAtual]?.realizado || 0)} para atingir.` })
-        } else {
-          lista.push({ tipo: 'negativo', texto: `Faturamento de ${this.mesAtualNome} em apenas ${atingimentoMeta.toFixed(1)}% da meta. Necessário acelerar as vendas.` })
-        }
-      }
 
       if (crescimentoFaturamento > 20) {
         lista.push({ tipo: 'positivo', texto: `Faturamento cresceu ${crescimentoFaturamento.toFixed(1)}% em relação ao período anterior.` })
@@ -667,49 +536,6 @@ export default {
       this.carregarDados()
     },
 
-    carregarMetas() {
-      try {
-        const raw = localStorage.getItem(STORAGE_METAS)
-        if (raw) {
-          const parsed = JSON.parse(raw)
-          if (parsed.faturamento && typeof parsed.faturamento === 'object') {
-            this.metas = { ...this.metas, ...parsed }
-            if (!this.metas.ano) this.metas.ano = new Date().getFullYear()
-          } else {
-            const ano = parsed.ano || new Date().getFullYear()
-            const fatVal = Number(parsed.faturamento) || 0
-            const lucVal = Number(parsed.lucro) || 0
-            const qtdVal = Number(parsed.quantidade) || 0
-            this.metas.ano = ano
-            for (let i = 1; i <= 12; i++) {
-              this.metas.faturamento[i] = fatVal
-              this.metas.lucro[i] = lucVal
-              this.metas.quantidade[i] = qtdVal
-            }
-          }
-        }
-      } catch (e) { /* ignora */ }
-    },
-
-    salvarMetas() {
-      localStorage.setItem(STORAGE_METAS, JSON.stringify({
-        ano: this.metas.ano,
-        faturamento: { ...this.metas.faturamento },
-        lucro: { ...this.metas.lucro },
-        quantidade: { ...this.metas.quantidade }
-      }))
-      this.modalMetasAberto = false
-    },
-
-    salvarMetasSilencioso() {
-      localStorage.setItem(STORAGE_METAS, JSON.stringify({
-        ano: this.metas.ano,
-        faturamento: { ...this.metas.faturamento },
-        lucro: { ...this.metas.lucro },
-        quantidade: { ...this.metas.quantidade }
-      }))
-    },
-
     formatarMoeda(valor) {
       if (!valor) return '0,00'
       return Number(valor).toFixed(2).replace('.', ',')
@@ -815,7 +641,7 @@ export default {
   gap: 8px;
 }
 
-.btn-export, .btn-meta {
+.btn-export {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -832,13 +658,13 @@ export default {
   white-space: nowrap;
 }
 
-.btn-export:hover:not(:disabled), .btn-meta:hover:not(:disabled) {
+.btn-export:hover:not(:disabled) {
   background: var(--primary-soft);
   border-color: var(--primary);
   color: var(--primary);
 }
 
-.btn-export:disabled, .btn-meta:disabled {
+.btn-export:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -937,26 +763,6 @@ export default {
 .kpi-trend.down { color: var(--danger); }
 .kpi-trend.subtle { color: var(--text-muted); font-weight: 500; }
 
-.meta-bar-wrap {
-  height: 6px;
-  background: var(--surface-muted);
-  border-radius: 3px;
-  margin-top: 8px;
-  overflow: hidden;
-}
-
-.meta-bar {
-  height: 100%;
-  background: var(--primary);
-  border-radius: 3px;
-  transition: width 0.4s ease;
-  min-width: 2px;
-}
-
-.meta-bar.superado {
-  background: var(--success);
-}
-
 /* Rankings */
 .rankings-grid {
   display: grid;
@@ -1028,12 +834,6 @@ tr.destaque td:first-child {
 }
 
 .pct-col { text-align: right; }
-
-.meta-input {
-  width: 100%;
-  height: 30px;
-  min-width: 90px;
-}
 
 td.up { color: var(--success); font-weight: 600; }
 td.down { color: var(--danger); font-weight: 600; }
@@ -1145,59 +945,6 @@ tr.atual td:first-child { color: var(--primary); }
 
 :deep(.export-btn-confirm:hover) { filter: brightness(1.1); }
 
-.meta-tabs {
-  display: flex;
-  gap: 4px;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0;
-}
-
-.meta-tab {
-  flex: 1;
-  height: 32px;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  padding: 0 8px;
-  transition: all 0.15s;
-}
-
-.meta-tab:hover { color: var(--text); }
-.meta-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
-
-.meta-table-wrap { max-height: 320px; overflow-y: auto; }
-
-.meta-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.meta-table th {
-  text-align: left;
-  padding: 6px 8px;
-  background: #F1F5F9;
-  color: var(--text-muted);
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-.meta-table td { padding: 4px 8px; border-bottom: 1px solid var(--surface-muted); font-feature-settings: 'tnum' 1; }
-.meta-table td:first-child { font-weight: 600; color: var(--text); }
-.meta-table tr.atual td:first-child { color: var(--primary); }
-.meta-table input { height: 28px; width: 100%; min-width: 80px; }
-.meta-table td.up { color: var(--success); font-weight: 600; }
-.meta-table td.down { color: var(--danger); font-weight: 600; }
-
-.export-desc {
-  color: var(--text-muted);
-  font-size: 13px;
-  margin: 0;
-}
-
 .field {
   display: flex;
   flex-direction: column;
@@ -1223,7 +970,7 @@ tr.atual td:first-child { color: var(--primary); }
   .header { flex-direction: column; align-items: stretch; }
   .header h3 { font-size: 20px; }
   .header-actions { width: 100%; flex-direction: column; }
-  .btn-export, .btn-meta { width: 100%; justify-content: center; height: 44px; font-size: 14px; }
+  .btn-export { width: 100%; justify-content: center; height: 44px; font-size: 14px; }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .kpi-value { font-size: 18px; }
   .rankings-grid { grid-template-columns: 1fr; }
