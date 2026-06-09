@@ -6,6 +6,7 @@
 
 Sistema ERP single-page para o negócio "Manuari", desenvolvido com Vue 3 (Options API), Vite 8, Supabase (PostgreSQL + Storage) e JavaScript puro. A aplicação gerencia produtos, vendas, estoque e uma vitrine de produtos personalizados com variações, preços e faixas de preço.
 
+**Repositório GitHub:** `https://github.com/WillDavid/manuari-mini-erp`
 **URL Supabase:** `https://byriesholblgyysnmnpu.supabase.co`
 **Senha de acesso:** `tuti@123`
 **Idioma:** Português (pt-BR)

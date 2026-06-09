@@ -1,6 +1,6 @@
 <template>
   <div
-    v-if="visivel"
+    v-if="mostrar"
     ref="floatingRef"
     class="floating-meta"
     :class="{ arrastando }"
@@ -67,6 +67,9 @@ export default {
   },
 
   computed: {
+    mostrar() {
+      return this.visivel && this.$route.path !== '/identificar'
+    },
     estiloPosicao() {
       return { left: this.posX + 'px', top: this.posY + 'px' }
     },
