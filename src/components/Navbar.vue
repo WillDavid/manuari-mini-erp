@@ -476,8 +476,9 @@ export default {
   }
 
   .link.active {
-    background: var(--primary-soft);
+    background: rgba(232, 110, 26, 0.12);
     color: var(--primary);
+    border-left: 3px solid var(--primary);
   }
 
   .nav .link:active {

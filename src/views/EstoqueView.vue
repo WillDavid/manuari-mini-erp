@@ -36,7 +36,18 @@
 
             <td data-label="Código">{{ p.codigo }}</td>
 
-            <td data-label="Estoque">{{ p.estoque }}</td>
+            <td data-label="Estoque">
+              <div class="estoque-cell">
+                <div class="estoque-bar">
+                  <div
+                    class="estoque-bar-fill"
+                    :style="{ width: Math.min((p.estoque / 20) * 100, 100) + '%' }"
+                    :class="{ ok: p.estoque > 3, baixo: p.estoque > 0 && p.estoque <= 3, zerado: p.estoque === 0 }"
+                  ></div>
+                </div>
+                <span class="estoque-valor">{{ p.estoque }}</span>
+              </div>
+            </td>
 
             <td data-label="Status">
               <span :class="statusClasse(p.estoque)">
@@ -406,6 +417,44 @@ button {
 .zerado {
   color: var(--danger);
   background: var(--danger-soft);
+}
+
+.estoque-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.estoque-bar {
+  width: 60px;
+  height: 4px;
+  background: var(--surface-muted);
+  border-radius: 2px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.estoque-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.estoque-bar-fill.ok {
+  background: var(--success);
+}
+
+.estoque-bar-fill.baixo {
+  background: var(--warning);
+}
+
+.estoque-bar-fill.zerado {
+  background: var(--danger);
+}
+
+.estoque-valor {
+  font-weight: 600;
+  font-feature-settings: 'tnum' 1;
 }
 
 .actions-cell {

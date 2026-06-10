@@ -33,9 +33,8 @@
           <tr>
             <th>Data</th>
             <th>Cliente</th>
-            <th>Produtos</th>
-            <th>Total</th>
-            <th>Desconto</th>
+            <th>Itens</th>
+            <th v-if="temDesconto">Desconto</th>
             <th>Total Final</th>
             <th>Custo Total</th>
             <th>Pagamento</th>
@@ -51,17 +50,16 @@
               {{ v.cliente || '-' }}
             </td>
 
-            <td data-label="Produtos">
-              <div v-for="item in v.itens_venda_erp" :key="item.id">
-                {{ item.quantidade }} x {{ item.produtos_erp.nome }}
+            <td data-label="Itens">
+              <div v-for="item in v.itens_venda_erp" :key="item.id" class="item-linha">
+                <div class="item-preco">
+                  {{ item.quantidade }}× R$ {{ formatarPreco(item.preco_unitario) }} = R$ {{ formatarPreco(item.subtotal) }}
+                </div>
+                <div class="item-nome">{{ item.produtos_erp?.nome }}</div>
               </div>
             </td>
 
-            <td data-label="Total">
-              R$ {{ formatarPreco(v.total_bruto) }}
-            </td>
-
-            <td data-label="Desconto">
+            <td v-if="temDesconto" data-label="Desconto">
               {{ formatarPreco(v.desconto) }}%
             </td>
 
@@ -232,6 +230,10 @@ export default {
   vendasPaginadas() {
     const inicio = (this.paginaAtual - 1) * this.itensPorPagina
     return this.vendasFiltradas.slice(inicio, inicio + this.itensPorPagina)
+  },
+
+  temDesconto() {
+    return this.vendas.some(v => Number(v.desconto) > 0)
   }
   },
 
@@ -749,6 +751,26 @@ td {
   padding: 10px 14px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
+}
+
+.item-linha {
+  padding: 2px 0;
+}
+
+.item-linha + .item-linha {
+  border-top: 1px solid var(--border);
+  margin-top: 2px;
+  padding-top: 4px;
+}
+
+.item-preco {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.item-nome {
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 button {

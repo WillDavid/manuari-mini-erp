@@ -68,8 +68,11 @@
 
             <td data-label="Categorias">
               <div class="stacked-chips">
-                <span v-for="c in p.categorias" :key="c" class="chip">
-                  {{ c }}
+                <span v-for="(cat, i) in p.categorias.slice(0, 2)" :key="cat" class="chip">
+                  {{ cat }}
+                </span>
+                <span v-if="p.categorias.length > 2" class="chip chip-mais">
+                  +{{ p.categorias.length - 2 }}
                 </span>
                 <span v-if="!p.categorias.length" class="chip muted-chip">
                   Sem categoria
@@ -990,6 +993,11 @@ tbody tr:last-child td {
 }
 
 .chip {
+  background: var(--surface-muted);
+  color: var(--text-muted);
+}
+
+.chip-mais {
   background: var(--surface-muted);
   color: var(--text-muted);
 }

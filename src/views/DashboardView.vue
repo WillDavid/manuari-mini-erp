@@ -64,7 +64,7 @@
 
     <!-- KPIs -->
     <div class="kpi-grid">
-      <div class="kpi-card">
+      <div class="kpi-card kpi-card--destaque">
         <div class="kpi-label">Faturamento</div>
         <div class="kpi-value">R$ {{ formatarMoeda(kpis.faturamento) }}</div>
         <div class="kpi-trend" :class="kpis.crescimentoFaturamento >= 0 ? 'up' : 'down'">
@@ -75,32 +75,33 @@
         </div>
       </div>
 
-      <div class="kpi-card">
-        <div class="kpi-label">Lucro</div>
-        <div class="kpi-value">R$ {{ formatarMoeda(kpis.lucro) }}</div>
-        <div class="kpi-trend subtle">
-          Margem {{ kpis.margemLucro.toFixed(1) }}%
+      <div class="kpi-subgrid">
+        <div class="kpi-card">
+          <div class="kpi-label">Lucro</div>
+          <div class="kpi-value">R$ {{ formatarMoeda(kpis.lucro) }}</div>
+          <div class="kpi-trend subtle">
+            Margem {{ kpis.margemLucro.toFixed(1) }}%
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Qtd. Vendida</div>
+          <div class="kpi-value">{{ kpis.quantidade }}</div>
+          <div class="kpi-trend subtle">unidades</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Pedidos</div>
+          <div class="kpi-value">{{ kpis.pedidos }}</div>
+          <div class="kpi-trend subtle">vendas</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Ticket Médio</div>
+          <div class="kpi-value">R$ {{ formatarMoeda(kpis.ticketMedio) }}</div>
+          <div class="kpi-trend subtle">por pedido</div>
         </div>
       </div>
-
-      <div class="kpi-card">
-        <div class="kpi-label">Qtd. Vendida</div>
-        <div class="kpi-value">{{ kpis.quantidade }}</div>
-        <div class="kpi-trend subtle">unidades</div>
-      </div>
-
-      <div class="kpi-card">
-        <div class="kpi-label">Pedidos</div>
-        <div class="kpi-value">{{ kpis.pedidos }}</div>
-        <div class="kpi-trend subtle">vendas</div>
-      </div>
-
-      <div class="kpi-card">
-        <div class="kpi-label">Ticket Médio</div>
-        <div class="kpi-value">R$ {{ formatarMoeda(kpis.ticketMedio) }}</div>
-        <div class="kpi-trend subtle">por pedido</div>
-      </div>
-
     </div>
 
     <!-- RANKINGS -->
@@ -707,8 +708,8 @@ export default {
 /* KPIs */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
   margin-bottom: 16px;
 }
 
@@ -717,6 +718,27 @@ export default {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 16px;
+}
+
+.kpi-card--destaque {
+  grid-column: span 2;
+  border-top: 3px solid var(--primary);
+  padding: 20px;
+}
+
+.kpi-card--destaque .kpi-value {
+  font-size: 32px;
+}
+
+.kpi-subgrid {
+  grid-column: span 3;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.kpi-subgrid .kpi-card {
+  padding: 12px;
 }
 
 .kpi-label {
@@ -733,6 +755,10 @@ export default {
   font-weight: 700;
   color: var(--text);
   font-feature-settings: 'tnum' 1;
+}
+
+.kpi-subgrid .kpi-value {
+  font-size: 18px;
 }
 
 .kpi-trend {
@@ -875,7 +901,9 @@ tr.destaque td:first-child {
 
 /* Responsivo */
 @media (max-width: 1200px) {
-  .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+  .kpi-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .kpi-card--destaque { grid-column: span 2; }
+  .kpi-subgrid { grid-column: span 3; }
   .rankings-grid { grid-template-columns: 1fr; }
 }
 
@@ -886,6 +914,11 @@ tr.destaque td:first-child {
   .header-actions { width: 100%; flex-direction: column; }
   .btn-export { width: 100%; justify-content: center; height: 44px; font-size: 14px; }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .kpi-card--destaque { grid-column: span 2; padding: 14px; }
+  .kpi-card--destaque .kpi-value { font-size: 28px; }
+  .kpi-subgrid { grid-column: span 2; gap: 8px; }
+  .kpi-subgrid .kpi-card { padding: 10px; }
+  .kpi-subgrid .kpi-value { font-size: 16px; }
   .kpi-value { font-size: 18px; }
   .rankings-grid { grid-template-columns: 1fr; }
   .filtro-row { flex-direction: column; }

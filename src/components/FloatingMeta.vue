@@ -157,7 +157,7 @@ export default {
         const raw = localStorage.getItem(STORAGE_POS)
         if (raw) return JSON.parse(raw)
       } catch { /* ignore */ }
-      return { x: 16, y: 80 }
+      return { x: window.innerWidth - 220, y: window.innerHeight - 300 }
     },
 
     salvarPosicao() {

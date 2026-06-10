@@ -11,8 +11,10 @@
         </button>
       </div>
       <div class="search-box">
-        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input ref="searchInput" v-model="busca" placeholder="Buscar produto..." class="search-input" />
+        <div class="search-wrapper">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input ref="searchInput" v-model="busca" placeholder="Buscar produto..." class="search-input" />
+        </div>
         <button v-if="busca" class="search-clear" aria-label="Limpar busca" @click="busca = ''; $refs.searchInput?.focus()">✕</button>
       </div>
     </header>
@@ -967,17 +969,25 @@ export default {
   align-items: center;
 }
 
+.search-wrapper {
+  position: relative;
+  flex: 1;
+}
+
 .search-icon {
   position: absolute;
   left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
   color: var(--text-dim);
   pointer-events: none;
+  z-index: 1;
 }
 
 .search-input {
   width: 100%;
   height: 38px;
-  padding: 0 34px;
+  padding: 0 34px 0 36px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface-soft);
@@ -2086,6 +2096,10 @@ export default {
   }
 
   .pdv-body {
+    padding-bottom: 80px;
+  }
+
+  .products-column {
     padding-bottom: 80px;
   }
 
