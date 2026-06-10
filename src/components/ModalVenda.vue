@@ -151,7 +151,7 @@ export default {
 
 .modal {
   background: var(--surface);
-  width: 100%; max-width: 640px;
+  width: 100%; max-width: 860px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-md);
