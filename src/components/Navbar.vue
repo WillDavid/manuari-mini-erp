@@ -34,7 +34,7 @@
 
       <div class="actions">
         <div v-if="itensBaixoEstoque.length" class="alert-wrapper">
-          <button class="alert-btn" @click.stop="alternarAlertas" :class="{ active: alertasAbertos }">
+          <button class="alert-btn" :class="{ active: alertasAbertos }" aria-label="Alertas de estoque baixo" :aria-expanded="alertasAbertos" @click.stop="alternarAlertas">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
               <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
@@ -62,7 +62,7 @@
           </div>
         </div>
 
-        <button class="menu-btn" @click="menuAberto = !menuAberto">
+        <button class="menu-btn" :aria-label="menuAberto ? 'Fechar menu' : 'Abrir menu'" :aria-expanded="menuAberto" @click="menuAberto = !menuAberto">
           <svg v-if="!menuAberto" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
           </svg>
@@ -71,7 +71,7 @@
           </svg>
         </button>
 
-        <button class="logout-btn" @click="logout" title="Sair">
+        <button class="logout-btn" title="Sair" aria-label="Sair do sistema" @click="logout">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
             <polyline points="16 17 21 12 16 7"/>
@@ -99,6 +99,13 @@ export default {
     }
   },
 
+  watch: {
+    '$route.fullPath'() {
+      this.fecharMenus()
+      this.buscarAlertasEstoque()
+    }
+  },
+
   mounted() {
     this.buscarAlertasEstoque()
     window.addEventListener('estoque-atualizado', this.buscarAlertasEstoque)
@@ -110,13 +117,6 @@ export default {
     document.removeEventListener('click', this.fecharDropdownExterno)
   },
 
-  watch: {
-    '$route.fullPath'() {
-      this.fecharMenus()
-      this.buscarAlertasEstoque()
-    }
-  },
-
   methods: {
     async buscarAlertasEstoque() {
       const { data, error } = await supabase
@@ -125,7 +125,7 @@ export default {
         .eq('ativo', true)
         .order('estoque', { ascending: true })
 
-      if (error) return
+      if (error) { console.error(error); return }
 
       this.itensBaixoEstoque = (data || []).filter(
         (produto) => Number(produto.estoque || 0) <= 3,

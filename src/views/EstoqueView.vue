@@ -14,6 +14,8 @@
       />
     </div>
 
+    <div v-if="carregando" class="loading-msg">Carregando...</div>
+
     <!-- TABELA -->
     <div class="table-card">
       <table>
@@ -53,6 +55,9 @@
               </div>
             </td>
 
+          </tr>
+          <tr v-if="!carregando && !produtosFiltrados.length">
+            <td colspan="5" class="empty-msg">Nenhum produto ativo no estoque</td>
           </tr>
         </tbody>
       </table>
@@ -111,96 +116,8 @@ export default {
       itensPorPagina: 20,
       modalAberto: false,
       produtoSelecionado: null,
-      tipoMovimentacao: 'entrada'
-    }
-  },
-
-  mounted() {
-    this.buscarProdutos()
-  },
-
-  methods: {
-
-    async buscarProdutos() {
-      const { data } = await supabase
-        .from('produtos_erp')
-        .select('*')
-        .eq('ativo', true)
-        .order('nome')
-
-      this.produtos = data || []
-      this.ajustarPagina()
-      this.notificarEstoqueAtualizado()
-    },
-
-    abrirMovimentacao(produto, tipo) {
-      this.produtoSelecionado = produto
-      this.tipoMovimentacao = tipo
-      this.modalAberto = true
-    },
-
-    fecharModal() {
-      this.modalAberto = false
-      this.produtoSelecionado = null
-    },
-
-    async salvarMovimentacao({ quantidade, observacao }) {
-      const produto = this.produtoSelecionado
-
-      let novoEstoque =
-        this.tipoMovimentacao === 'entrada'
-          ? produto.estoque + quantidade
-          : produto.estoque - quantidade
-
-      if (novoEstoque < 0) {
-        alert('Estoque não pode ficar negativo')
-        return
-      }
-
-      // atualizar estoque
-      await supabase
-        .from('produtos_erp')
-        .update({ estoque: novoEstoque })
-        .eq('id', produto.id)
-
-      // registrar movimentação
-      await supabase
-        .from('estoque_movimentacoes')
-        .insert([{
-          produto_id: produto.id,
-          tipo: this.tipoMovimentacao,
-          quantidade,
-          observacao
-        }])
-
-      this.fecharModal()
-      this.buscarProdutos()
-    },
-
-    statusTexto(qtd) {
-      if (qtd === 0) return 'Zerado'
-      if (qtd <= 3) return 'Baixo'
-      return 'OK'
-    },
-
-    statusClasse(qtd) {
-      if (qtd === 0) return 'zerado'
-      if (qtd <= 3) return 'baixo'
-      return 'ok'
-    },
-
-    notificarEstoqueAtualizado() {
-      window.dispatchEvent(new Event('estoque-atualizado'))
-    },
-
-    irParaPagina(pagina) {
-      this.paginaAtual = pagina
-    },
-
-    ajustarPagina() {
-      if (this.paginaAtual > this.totalPaginas) {
-        this.paginaAtual = this.totalPaginas
-      }
+      tipoMovimentacao: 'entrada',
+      carregando: false
     }
   },
 
@@ -246,6 +163,109 @@ export default {
 
     itensPorPagina() {
       this.paginaAtual = 1
+    }
+  },
+
+  mounted() {
+    this.buscarProdutos()
+  },
+
+  methods: {
+
+    async buscarProdutos() {
+      this.carregando = true
+      try {
+        const { data } = await supabase
+          .from('produtos_erp')
+          .select('*')
+          .eq('ativo', true)
+          .order('nome')
+
+        this.produtos = data || []
+        this.ajustarPagina()
+        this.notificarEstoqueAtualizado()
+      } catch (error) {
+        console.error(error)
+        alert('Erro ao carregar produtos')
+      } finally {
+        this.carregando = false
+      }
+    },
+
+    abrirMovimentacao(produto, tipo) {
+      this.produtoSelecionado = produto
+      this.tipoMovimentacao = tipo
+      this.modalAberto = true
+    },
+
+    fecharModal() {
+      this.modalAberto = false
+      this.produtoSelecionado = null
+    },
+
+    async salvarMovimentacao({ quantidade, observacao }) {
+      if (this.tipoMovimentacao === 'saida' && !confirm('Confirmar saída de estoque?')) return
+      try {
+        const produto = this.produtoSelecionado
+
+        let novoEstoque =
+          this.tipoMovimentacao === 'entrada'
+            ? produto.estoque + quantidade
+            : produto.estoque - quantidade
+
+        if (novoEstoque < 0) {
+          alert('Estoque não pode ficar negativo')
+          return
+        }
+
+        // atualizar estoque
+        await supabase
+          .from('produtos_erp')
+          .update({ estoque: novoEstoque })
+          .eq('id', produto.id)
+
+        // registrar movimentação
+        await supabase
+          .from('estoque_movimentacoes')
+          .insert([{
+            produto_id: produto.id,
+            tipo: this.tipoMovimentacao,
+            quantidade,
+            observacao
+          }])
+
+        this.fecharModal()
+        this.buscarProdutos()
+      } catch (error) {
+        console.error(error)
+        alert('Erro ao salvar movimentação')
+      }
+    },
+
+    statusTexto(qtd) {
+      if (qtd === 0) return 'Zerado'
+      if (qtd <= 3) return 'Baixo'
+      return 'OK'
+    },
+
+    statusClasse(qtd) {
+      if (qtd === 0) return 'zerado'
+      if (qtd <= 3) return 'baixo'
+      return 'ok'
+    },
+
+    notificarEstoqueAtualizado() {
+      window.dispatchEvent(new Event('estoque-atualizado'))
+    },
+
+    irParaPagina(pagina) {
+      this.paginaAtual = pagina
+    },
+
+    ajustarPagina() {
+      if (this.paginaAtual > this.totalPaginas) {
+        this.paginaAtual = this.totalPaginas
+      }
     }
   }
 }
@@ -293,7 +313,7 @@ table {
 }
 
 thead th {
-  background: #F1F5F9;
+  background: var(--surface-muted);
   padding: 8px 14px;
   text-align: left;
   color: var(--text-muted);
@@ -386,11 +406,6 @@ button {
 .zerado {
   color: var(--danger);
   background: var(--danger-soft);
-}
-
-.actions {
-  display: flex;
-  gap: 6px;
 }
 
 .actions-cell {

@@ -11,18 +11,18 @@
     <div class="meta-header">
       <span class="meta-mes">{{ mesAtual }}</span>
       <div class="meta-header-actions">
-        <button class="meta-btn" @click.stop="abrirConfig" title="Configurar Metas">
+        <button class="meta-btn" title="Configurar Metas" aria-label="Configurar metas" @click.stop="abrirConfig">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
             <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
         </button>
-        <button class="meta-btn" @click.stop="buscarFaturamento" title="Atualizar">
+        <button class="meta-btn" title="Atualizar" aria-label="Atualizar faturamento" @click.stop="buscarFaturamento">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
             <polyline points="23 4 23 10 17 10"/>
             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
           </svg>
         </button>
-        <button class="meta-btn" @click.stop="fechar">✕</button>
+        <button class="meta-btn" aria-label="Fechar widget de meta" @click.stop="fechar">✕</button>
       </div>
     </div>
     <div class="meta-body">
@@ -49,11 +49,11 @@
     </div>
 
     <!-- MODAL CONFIG METAS -->
-    <div v-if="configAberto" class="modal-overlay" @click.self="configAberto = false">
+     <div v-if="configAberto" class="modal-overlay" @click.self="configAberto = false" @keydown.escape="configAberto = false">
       <div class="modal" role="dialog" aria-modal="true">
         <div class="modal-header">
           <h2 class="modal-title">Metas Mensais {{ anoConfig }}</h2>
-          <button class="close-btn" @click="configAberto = false">
+          <button class="close-btn" aria-label="Fechar" @click="configAberto = false">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
@@ -72,8 +72,8 @@
                 <td>{{ nome }}</td>
                 <td>
                   <input
-                    type="number"
                     v-model.number="metas[i + 1]"
+                    type="number"
                     min="0"
                     step="0.01"
                     placeholder="0,00"
@@ -85,7 +85,7 @@
         </div>
         <div class="modal-footer">
           <button class="export-btn-cancel" @click="configAberto = false">Cancelar</button>
-          <button class="export-btn-confirm" @click="salvarMetas" :disabled="salvando">
+          <button class="export-btn-confirm" :disabled="salvando" @click="salvarMetas">
             {{ salvando ? 'Salvando...' : 'Salvar Metas' }}
           </button>
         </div>
@@ -156,7 +156,7 @@ export default {
       try {
         const raw = localStorage.getItem(STORAGE_POS)
         if (raw) return JSON.parse(raw)
-      } catch (e) { /* ignore */ }
+      } catch { /* ignore */ }
       return { x: 16, y: 80 }
     },
 
@@ -529,7 +529,7 @@ export default {
 .meta-table th {
   text-align: left;
   padding: 8px 10px;
-  background: #F1F5F9;
+  background: var(--surface-muted);
   color: var(--text-muted);
   font-size: 11px;
   font-weight: 700;

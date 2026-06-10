@@ -5,15 +5,15 @@
     <header class="pdv-header">
       <div class="pdv-header-top">
         <h1 class="pdv-title">PDV</h1>
-        <button v-if="carrinho.length" class="pdv-cart-badge" @click="abrirDrawer">
+        <button v-if="carrinho.length" class="pdv-cart-badge" aria-label="Abrir carrinho" :aria-expanded="drawerAberto" @click="abrirDrawer">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
           <span class="pdv-cart-count">{{ totalItens }}</span>
         </button>
       </div>
       <div class="search-box">
         <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input v-model="busca" placeholder="Buscar produto..." class="search-input" ref="searchInput" />
-        <button v-if="busca" class="search-clear" @click="busca = ''; $refs.searchInput?.focus()">✕</button>
+        <input ref="searchInput" v-model="busca" placeholder="Buscar produto..." class="search-input" />
+        <button v-if="busca" class="search-clear" aria-label="Limpar busca" @click="busca = ''; $refs.searchInput?.focus()">✕</button>
       </div>
     </header>
 
@@ -65,11 +65,11 @@
                 <span class="cart-item-preco-unit">R$ {{ formatar(item.preco) }}</span>
               </div>
               <div class="cart-item-actions">
-                <button class="qty-btn" @click="diminuir(i)">−</button>
+                <button class="qty-btn" aria-label="Diminuir quantidade" @click="diminuir(i)">−</button>
                 <span class="qty-value">{{ item.quantidade }}</span>
-                <button class="qty-btn" @click="aumentar(i)">+</button>
+                <button class="qty-btn" aria-label="Aumentar quantidade" @click="aumentar(i)">+</button>
                 <span class="cart-item-subtotal">R$ {{ formatar(item.subtotal) }}</span>
-                <button class="cart-item-remove" @click="remover(i)" title="Remover">✕</button>
+                <button class="cart-item-remove" title="Remover" @click="remover(i)">✕</button>
               </div>
             </div>
           </div>
@@ -83,7 +83,7 @@
               <div class="cart-summary-row">
                 <span>Desconto</span>
                 <div class="cart-discount-input">
-                  <input type="number" v-model.number="desconto" min="0" max="100" @input="recalcular" />
+                  <input v-model.number="desconto" type="number" min="0" max="100" @input="recalcular" />
                   <span>%</span>
                 </div>
               </div>
@@ -211,7 +211,7 @@
 
     <!-- === MOBILE: DRAWER CARRINHO === -->
     <Transition name="drawer">
-      <div v-if="drawerAberto" class="drawer-overlay" @click.self="drawerAberto = false">
+      <div v-if="drawerAberto" class="drawer-overlay" role="dialog" aria-modal="true" @click.self="drawerAberto = false">
         <div class="drawer">
           <div class="drawer-header">
             <div class="drawer-header-left">
@@ -219,7 +219,7 @@
               <h2>Carrinho</h2>
               <span class="drawer-count">{{ totalItens }}</span>
             </div>
-            <button class="drawer-close" @click="drawerAberto = false">✕</button>
+            <button class="drawer-close" aria-label="Fechar carrinho" @click="drawerAberto = false">✕</button>
           </div>
 
           <div class="drawer-body">
@@ -235,9 +235,9 @@
                   <span class="cart-item-preco-unit">R$ {{ formatar(item.preco) }}</span>
                 </div>
                 <div class="cart-item-actions">
-                  <button class="qty-btn" @click="diminuir(i)">−</button>
+                  <button class="qty-btn" aria-label="Diminuir quantidade" @click="diminuir(i)">−</button>
                   <span class="qty-value">{{ item.quantidade }}</span>
-                  <button class="qty-btn" @click="aumentar(i)">+</button>
+                  <button class="qty-btn" aria-label="Aumentar quantidade" @click="aumentar(i)">+</button>
                   <span class="cart-item-subtotal">R$ {{ formatar(item.subtotal) }}</span>
                   <button class="cart-item-remove" @click="remover(i)">✕</button>
                 </div>
@@ -252,7 +252,7 @@
               <div class="cart-summary-row">
                 <span>Desconto</span>
                 <div class="cart-discount-input">
-                  <input type="number" v-model.number="desconto" min="0" max="100" @input="recalcular" />
+                  <input v-model.number="desconto" type="number" min="0" max="100" @input="recalcular" />
                   <span>%</span>
                 </div>
               </div>
@@ -297,7 +297,7 @@
 
     <!-- === MODAL PRÉVIA (antes de efetivar venda) === -->
     <Transition name="drawer">
-      <div v-if="previaAberto" class="drawer-overlay previa-overlay" @click.self="fecharPrevia">
+      <div v-if="previaAberto" class="drawer-overlay previa-overlay" role="dialog" aria-modal="true" @click.self="fecharPrevia">
         <div class="drawer success-drawer">
           <div class="success-check" :class="{ confirmado: vendaConfirmada }">
             <svg v-if="!vendaConfirmada" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
@@ -394,6 +394,7 @@ export default {
       preview: null,
       vendaConfirmada: false,
       efetivando: false,
+      ultimaVenda: null,
     }
   },
 
@@ -562,6 +563,20 @@ export default {
       this.efetivando = true
 
       try {
+        for (const item of this.preview?.itensDetalhados || []) {
+          const { data: produtoEstoque } = await supabase
+            .from('produtos_erp')
+            .select('estoque')
+            .eq('id', item.produto_id)
+            .single()
+
+          const disponivel = produtoEstoque?.estoque || 0
+          if (disponivel < item.quantidade) {
+            alert('Estoque insuficiente para: ' + item.nome)
+            return
+          }
+        }
+
         const payload = {
           cliente: this.preview?.cliente || null,
           data_venda: new Date().toISOString(),
@@ -579,6 +594,8 @@ export default {
           .single()
 
         if (erroVenda) throw erroVenda
+
+        this.ultimaVenda = vendaSalva
 
         const custosMap = {}
         for (const item of this.preview?.itensDetalhados || []) {

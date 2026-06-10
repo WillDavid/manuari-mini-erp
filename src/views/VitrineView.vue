@@ -97,7 +97,6 @@
 
             <td class="actions-cell">
               <div class="actions-wrap">
-                <button class="view" @click="verDetalhes(p)">Ver</button>
                 <button class="edit" @click="editar(p)">Editar</button>
                 <button class="duplicate" :disabled="salvando" @click="duplicar(p)">Duplicar</button>
                 <button class="delete" :disabled="salvando" @click="deletar(p)">Excluir</button>
@@ -203,6 +202,70 @@ export default {
       erro: '',
       produto: this.getProdutoVazio(),
     }
+  },
+
+  computed: {
+    totalPaginas() {
+      return Math.max(1, Math.ceil(this.produtosFiltrados.length / this.itensPorPagina))
+    },
+
+    tiposDisponiveis() {
+      const dinamicos = this.produtos.map((produto) => produto.tipo).filter(Boolean)
+      return [...new Set([...TIPOS_PADRAO, ...dinamicos])].sort((a, b) => a.localeCompare(b))
+    },
+
+    categoriasDisponiveis() {
+      const dinamicas = this.produtos.flatMap((produto) => produto.categorias || []).filter(Boolean)
+      return [...new Set([...CATEGORIAS_PADRAO, ...dinamicas])].sort((a, b) => a.localeCompare(b))
+    },
+
+    produtosFiltrados() {
+      const termo = this.busca.trim().toLowerCase()
+
+      if (!termo) return this.produtos
+
+      return this.produtos.filter((produto) => {
+        const categorias = Array.isArray(produto.categorias) ? produto.categorias.join(' ') : ''
+        const variacoes = Array.isArray(produto.variacoes)
+          ? produto.variacoes.map((variacao) => `${variacao.nome} ${variacao.tipo_variacao}`).join(' ')
+          : ''
+
+        const conteudo = [
+          produto.name,
+          produto.tipo,
+          categorias,
+          variacoes,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+
+        return conteudo.includes(termo)
+      })
+    },
+
+    produtosPaginados() {
+      const inicio = (this.paginaAtual - 1) * this.itensPorPagina
+      return this.produtosFiltrados.slice(inicio, inicio + this.itensPorPagina)
+    },
+  },
+
+  watch: {
+    produtos() {
+      this.ajustarPagina()
+    },
+
+    busca() {
+      this.paginaAtual = 1
+    },
+
+    itensPorPagina() {
+      this.paginaAtual = 1
+    },
+
+    ordenacao() {
+      this.buscar()
+    },
   },
 
   mounted() {
@@ -323,10 +386,6 @@ export default {
       this.produtoId = produto.id
       this.editando = true
       this.modal = true
-    },
-
-    verDetalhes(produto) {
-      this.editar(produto)
     },
 
     fechar() {
@@ -726,70 +785,6 @@ export default {
       }
     },
   },
-
-  computed: {
-    totalPaginas() {
-      return Math.max(1, Math.ceil(this.produtosFiltrados.length / this.itensPorPagina))
-    },
-
-    tiposDisponiveis() {
-      const dinamicos = this.produtos.map((produto) => produto.tipo).filter(Boolean)
-      return [...new Set([...TIPOS_PADRAO, ...dinamicos])].sort((a, b) => a.localeCompare(b))
-    },
-
-    categoriasDisponiveis() {
-      const dinamicas = this.produtos.flatMap((produto) => produto.categorias || []).filter(Boolean)
-      return [...new Set([...CATEGORIAS_PADRAO, ...dinamicas])].sort((a, b) => a.localeCompare(b))
-    },
-
-    produtosFiltrados() {
-      const termo = this.busca.trim().toLowerCase()
-
-      if (!termo) return this.produtos
-
-      return this.produtos.filter((produto) => {
-        const categorias = Array.isArray(produto.categorias) ? produto.categorias.join(' ') : ''
-        const variacoes = Array.isArray(produto.variacoes)
-          ? produto.variacoes.map((variacao) => `${variacao.nome} ${variacao.tipo_variacao}`).join(' ')
-          : ''
-
-        const conteudo = [
-          produto.name,
-          produto.tipo,
-          categorias,
-          variacoes,
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase()
-
-        return conteudo.includes(termo)
-      })
-    },
-
-    produtosPaginados() {
-      const inicio = (this.paginaAtual - 1) * this.itensPorPagina
-      return this.produtosFiltrados.slice(inicio, inicio + this.itensPorPagina)
-    },
-  },
-
-  watch: {
-    produtos() {
-      this.ajustarPagina()
-    },
-
-    busca() {
-      this.paginaAtual = 1
-    },
-
-    itensPorPagina() {
-      this.paginaAtual = 1
-    },
-
-    ordenacao() {
-      this.buscar()
-    },
-  },
 }
 </script>
 
@@ -811,20 +806,6 @@ export default {
 .header-actions {
   display: flex;
   gap: 8px;
-}
-
-.btn-secondary {
-  height: 32px;
-  padding: 0 12px;
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 12px;
-  display: inline-flex;
-  align-items: center;
 }
 
 .header h3 {
@@ -880,7 +861,7 @@ thead {
 }
 
 th {
-  background: #F1F5F9;
+  background: var(--surface-muted);
   padding: 8px 14px;
   text-align: left;
   color: var(--text-muted);
@@ -1037,7 +1018,7 @@ button:disabled {
   height: 32px;
   padding: 0 12px;
   border-radius: var(--radius-sm);
-  background: #E86E1A;
+  background: var(--primary);
   color: white;
   font-size: 12px;
 }
@@ -1096,12 +1077,6 @@ button:disabled {
 
 .delete:hover {
   background: #fee2e2;
-}
-
-.actions {
-  display: flex;
-  gap: 6px;
-  justify-content: flex-end;
 }
 
 .actions-cell {

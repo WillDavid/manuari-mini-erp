@@ -17,6 +17,8 @@
       />
     </div>
 
+    <div v-if="carregando" class="loading-msg">Carregando...</div>
+
     <!-- TABELA -->
     <div class="table-card">
       <table>
@@ -50,6 +52,9 @@
                     <button class="delete" @click="deletarProduto(p.id)">Excluir</button>
                   </div>
                 </td>
+            </tr>
+            <tr v-if="!carregando && !produtosFiltrados.length">
+              <td colspan="7" class="empty-msg">Nenhum produto encontrado</td>
             </tr>
         </tbody>
       </table>
@@ -111,6 +116,7 @@ export default {
       modalAberto: false,
       editando: false,
       produtoId: null,
+      carregando: false,
 
       produto: {
         nome: '',
@@ -123,21 +129,76 @@ export default {
     }
   },
 
+  computed: {
+    totalPaginas() {
+      return Math.max(1, Math.ceil(this.produtosFiltrados.length / this.itensPorPagina))
+    },
+
+    produtosFiltrados() {
+      const termo = this.busca.trim().toLowerCase()
+
+      if (!termo) return this.produtos
+
+      return this.produtos.filter((produto) => {
+        const conteudo = [
+          produto.nome,
+          produto.codigo,
+          produto.preco_custo,
+          produto.preco_venda,
+          produto.estoque,
+          produto.ativo ? 'ativo' : 'inativo',
+        ]
+          .filter((valor) => valor !== null && valor !== undefined)
+          .join(' ')
+          .toLowerCase()
+
+        return conteudo.includes(termo)
+      })
+    },
+
+    produtosPaginados() {
+      const inicio = (this.paginaAtual - 1) * this.itensPorPagina
+      return this.produtosFiltrados.slice(inicio, inicio + this.itensPorPagina)
+    }
+  },
+
+  watch: {
+    produtos() {
+      this.ajustarPagina()
+    },
+
+    busca() {
+      this.paginaAtual = 1
+    },
+
+    itensPorPagina() {
+      this.paginaAtual = 1
+    }
+  },
+
   mounted() {
     this.buscarProdutos()
   },
 
   methods: {
     async buscarProdutos() {
-      const { data, error } = await supabase
-        .from('produtos_erp')
-        .select('*')
-        .order('created_at', { ascending: false })
+      this.carregando = true
+      try {
+        const { data, error } = await supabase
+          .from('produtos_erp')
+          .select('*')
+          .order('created_at', { ascending: false })
 
-      if (!error) {
+        if (error) throw error
+
         this.produtos = data
         this.ajustarPagina()
         this.notificarEstoqueAtualizado()
+      } catch (error) {
+        console.error(error)
+        alert('Erro ao carregar produtos')
+      } finally {
+        this.carregando = false
       }
     },
 
@@ -232,53 +293,6 @@ export default {
     notificarEstoqueAtualizado() {
       window.dispatchEvent(new Event('estoque-atualizado'))
     }
-  },
-
-  computed: {
-    totalPaginas() {
-      return Math.max(1, Math.ceil(this.produtosFiltrados.length / this.itensPorPagina))
-    },
-
-    produtosFiltrados() {
-      const termo = this.busca.trim().toLowerCase()
-
-      if (!termo) return this.produtos
-
-      return this.produtos.filter((produto) => {
-        const conteudo = [
-          produto.nome,
-          produto.codigo,
-          produto.preco_custo,
-          produto.preco_venda,
-          produto.estoque,
-          produto.ativo ? 'ativo' : 'inativo',
-        ]
-          .filter((valor) => valor !== null && valor !== undefined)
-          .join(' ')
-          .toLowerCase()
-
-        return conteudo.includes(termo)
-      })
-    },
-
-    produtosPaginados() {
-      const inicio = (this.paginaAtual - 1) * this.itensPorPagina
-      return this.produtosFiltrados.slice(inicio, inicio + this.itensPorPagina)
-    }
-  },
-
-  watch: {
-    produtos() {
-      this.ajustarPagina()
-    },
-
-    busca() {
-      this.paginaAtual = 1
-    },
-
-    itensPorPagina() {
-      this.paginaAtual = 1
-    }
   }
 }
 </script>
@@ -331,7 +345,7 @@ table {
 }
 
 thead th {
-  background: #F1F5F9;
+  background: var(--surface-muted);
   text-align: left;
   padding: 8px 14px;
   color: var(--text-muted);
@@ -432,11 +446,6 @@ button {
 .inativo {
   color: var(--danger);
   background: var(--danger-soft);
-}
-
-.actions {
-  display: flex;
-  gap: 6px;
 }
 
 .actions-cell {

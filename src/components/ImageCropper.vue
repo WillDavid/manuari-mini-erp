@@ -1,9 +1,9 @@
 <template>
-  <div class="cropper-overlay">
+   <div class="cropper-overlay" @keydown.escape="$emit('cancel')">
     <div class="cropper-modal">
       <div class="cropper-header">
         <h4>Cortar Imagem</h4>
-        <button class="close" @click="$emit('cancel')">✕</button>
+        <button class="close" aria-label="Fechar corte de imagem" @click="$emit('cancel')">✕</button>
       </div>
       
       <div class="cropper-body">
@@ -39,7 +39,7 @@ import 'vue-advanced-cropper/dist/style.css'
 export default {
   components: { Cropper },
   
-  props: ['src'],
+  props: { src: { type: String, default: '' } },
   emits: ['cancel', 'crop'],
 
   methods: {

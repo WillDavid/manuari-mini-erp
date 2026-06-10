@@ -12,6 +12,7 @@
           type="password"
           placeholder="Senha"
           class="input"
+          aria-label="Senha de acesso"
           required
         />
 
@@ -35,7 +36,6 @@ export default {
 data() {
     return {
       isLoading: false,
-      username: '',
       logo,
       erro: ''
     }
@@ -69,7 +69,7 @@ data() {
         const expiresAt = Date.now() + (DIAS_LOGADO * 24 * 60 * 60 * 1000)
         localStorage.setItem('authExpires', expiresAt.toString())
         this.$router.push('/pdv')
-      } catch (error) {
+      } catch {
         this.erro = 'Erro ao entrar. Tente novamente.'
       } finally {
         this.isLoading = false

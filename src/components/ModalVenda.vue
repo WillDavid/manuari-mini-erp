@@ -1,10 +1,10 @@
 <template>
-  <div class="modal-overlay" @click.self="$emit('fechar')">
+   <div class="modal-overlay" @click.self="$emit('fechar')" @keydown.escape="$emit('fechar')">
     <div class="modal" role="dialog" aria-modal="true">
 
       <div class="modal-header">
         <h2 class="modal-title">{{ editando ? 'Editar Venda' : 'Nova Venda' }}</h2>
-        <button class="close-btn" @click="$emit('fechar')" aria-label="Fechar">
+        <button class="close-btn" aria-label="Fechar" @click="$emit('fechar')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
@@ -19,7 +19,7 @@
           </div>
           <div class="field">
             <label>Data</label>
-            <input type="date" v-model="venda.data_venda" />
+            <input v-model="venda.data_venda" type="date" />
           </div>
         </div>
 
@@ -37,10 +37,10 @@
           <div v-if="venda.itens.length === 0" class="empty-state">Nenhum produto adicionado</div>
           <div v-for="(item, i) in venda.itens" :key="i" class="item-row">
             <span class="item-name">{{ item.nome }}</span>
-            <input type="number" min="1" v-model.number="item.quantidade" @input="atualizar(item)" class="item-qty" />
+            <input v-model.number="item.quantidade" type="number" min="1" class="item-qty" @input="atualizar(item)" />
             <span class="item-price">R$ {{ formatar(item.preco) }}</span>
             <span class="item-subtotal">R$ {{ formatar(item.subtotal) }}</span>
-            <button class="btn btn-danger btn-icon" @click="remover(i)" aria-label="Remover">×</button>
+            <button class="btn btn-danger btn-icon" aria-label="Remover" @click="remover(i)">×</button>
           </div>
         </div>
 
@@ -52,7 +52,7 @@
           <div class="summary-row">
             <span>Desconto (%)</span>
             <div class="input-group">
-              <input type="number" min="0" max="100" v-model="venda.desconto" @input="recalcular" />
+              <input v-model="venda.desconto" type="number" min="0" max="100" @input="recalcular" />
               <span>%</span>
             </div>
           </div>
@@ -79,10 +79,10 @@
       </div>
 
       <div class="modal-footer">
-        <button class="btn btn-primary" @click="submit" :disabled="isLoading">
+        <button class="btn btn-primary" :disabled="isLoading" @click="submit">
           {{ isLoading ? 'Processando...' : editando ? 'Atualizar' : 'Finalizar Venda' }}
         </button>
-        <button class="btn btn-ghost" @click="$emit('fechar')" :disabled="isLoading">Cancelar</button>
+        <button class="btn btn-ghost" :disabled="isLoading" @click="$emit('fechar')">Cancelar</button>
       </div>
 
     </div>
@@ -91,7 +91,8 @@
 
 <script>
 export default {
-  props: ['produtos', 'editando', 'vendaInicial'],
+  props: { produtos: { type: Array, default: () => [] }, editando: { type: Boolean, default: false }, vendaInicial: { type: Object, default: null } },
+  emits: ['fechar', 'salvar'],
   data() {
     return {
       isLoading: false,
@@ -133,7 +134,7 @@ export default {
       if (this.isLoading) return
       if (this.venda.itens.length === 0) { alert('Adicione produtos'); return }
       this.isLoading = true
-      try { await new Promise(resolve => this.$emit('salvar', this.venda)) }
+      try { this.$emit('salvar', this.venda) }
       catch (error) { console.error('Erro ao salvar venda:', error) }
       finally { this.isLoading = false }
     }
@@ -151,7 +152,7 @@ export default {
 
 .modal {
   background: var(--surface);
-  width: 100%; max-width: 860px;
+  width: 100%; max-width: 1024px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-md);

@@ -41,7 +41,7 @@ const router = createRouter({
   routes,
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   const expiration = localStorage.getItem('authExpires')
   const isLogged = expiration && Date.now() < parseInt(expiration)
 

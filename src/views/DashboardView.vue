@@ -4,7 +4,7 @@
     <div class="header">
       <h3>Dashboard Gerencial</h3>
       <div class="header-actions">
-        <button class="btn-export" @click="exportarPdf" :disabled="!vendas.length">
+        <button class="btn-export" :disabled="!vendas.length" @click="exportarPdf">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
@@ -12,7 +12,7 @@
           </svg>
           PDF
         </button>
-        <button class="btn-export" @click="exportarExcel" :disabled="!vendas.length">
+        <button class="btn-export" :disabled="!vendas.length" @click="exportarExcel">
           Excel
         </button>
 
@@ -40,11 +40,11 @@
         <template v-if="periodo === 'personalizado'">
           <div class="field">
             <label>Início</label>
-            <input type="date" v-model="dataInicio" />
+            <input v-model="dataInicio" type="date" />
           </div>
           <div class="field">
             <label>Fim</label>
-            <input type="date" v-model="dataFim" />
+            <input v-model="dataFim" type="date" />
           </div>
         </template>
 
@@ -56,7 +56,7 @@
           </select>
         </div>
 
-        <button class="btn-aplicar" @click="aplicarFiltros" :disabled="carregando">
+        <button class="btn-aplicar" :disabled="carregando" @click="aplicarFiltros">
           {{ carregando ? 'Carregando...' : 'Atualizar' }}
         </button>
       </div>
@@ -181,8 +181,6 @@
 <script>
 import { supabase } from '../services/supabase'
 
-const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
-
 function hoje() { return new Date().toISOString().split('T')[0] }
 
 function diasAtras(n) {
@@ -218,13 +216,6 @@ export default {
     }
   },
 
-  MESES,
-
-  mounted() {
-    this.aplicarPeriodo()
-    this.carregarDados()
-  },
-
   computed: {
     mesAtual() {
       return new Date().getMonth() + 1
@@ -248,21 +239,6 @@ export default {
       return mapa
     },
 
-    margemPorMes() {
-      const mapa = {}
-      for (let i = 1; i <= 12; i++) {
-        const r = this.faturamentoPorMes[i]?.realizado || 0
-        const c = this.faturamentoPorMes[i]?.custo || 0
-        mapa[i] = r > 0 ? ((r - c) / r) * 100 : 0
-      }
-      return mapa
-    },
-
-    clientes() {
-      const set = new Set()
-      this.vendas.forEach(v => { if (v.cliente) set.add(v.cliente) })
-      return [...set].sort()
-    },
     vendasFiltradas() {
       let resultado = [...this.vendas]
 
@@ -336,7 +312,7 @@ export default {
         ? ((this.faturamentoPorMes[mesAtualNum]?.realizado || 0) - faturamentoMesPassado) / faturamentoMesPassado * 100
         : 0
 
-      const diasDecorridos = this.dataInicio && this.dataFim
+      const _diasDecorridos = this.dataInicio && this.dataFim
         ? Math.max(1, Math.ceil((new Date(this.dataFim) - new Date(this.dataInicio)) / 86400000) + 1)
         : 30
 
@@ -424,7 +400,7 @@ export default {
 
     insights() {
       const lista = []
-      const { faturamento, lucro, margemLucro, quantidade, pedidos, crescimentoFaturamento } = this.kpis
+      const { faturamento, _lucro, margemLucro, _quantidade, _pedidos, crescimentoFaturamento } = this.kpis
 
       if (this.vendasFiltradas.length === 0) return lista
 
@@ -461,6 +437,24 @@ export default {
 
       return lista
     }
+  },
+
+  watch: {
+    periodo() {
+      this.aplicarPeriodo()
+    },
+    dataInicio() {
+      if (this.periodo === 'personalizado') this.carregarDados()
+    },
+    dataFim() {
+      if (this.periodo === 'personalizado') this.carregarDados()
+    },
+    produtoFiltro() { this.aplicarFiltros() }
+  },
+
+  mounted() {
+    this.aplicarPeriodo()
+    this.carregarDados()
   },
 
   methods: {
@@ -597,19 +591,6 @@ export default {
         alert('Erro ao exportar Excel')
       }
     }
-  },
-
-  watch: {
-    periodo() {
-      this.aplicarPeriodo()
-    },
-    dataInicio() {
-      if (this.periodo === 'personalizado') this.carregarDados()
-    },
-    dataFim() {
-      if (this.periodo === 'personalizado') this.carregarDados()
-    },
-    produtoFiltro() { this.aplicarFiltros() }
   }
 }
 </script>
@@ -794,7 +775,7 @@ export default {
 }
 
 .table-card thead th {
-  background: #F1F5F9;
+  background: var(--surface-muted);
   text-align: left;
   padding: 8px 14px;
   color: var(--text-muted);
@@ -835,11 +816,6 @@ tr.destaque td:first-child {
 }
 
 .pct-col { text-align: right; }
-
-td.up { color: var(--success); font-weight: 600; }
-td.down { color: var(--danger); font-weight: 600; }
-
-tr.atual td:first-child { color: var(--primary); }
 
 /* Alertas */
 .alertas-section {
@@ -882,69 +858,6 @@ tr.atual td:first-child { color: var(--primary); }
 .alerta-texto {
   color: var(--text);
 }
-
-/* Modal Metas */
-:deep(.modal-overlay) {
-  position: fixed; inset: 0; z-index: 2000;
-  background: rgba(15, 23, 42, 0.48);
-  display: flex; align-items: center; justify-content: center;
-  padding: 16px;
-}
-
-:deep(.modal) {
-  background: var(--surface);
-  width: 100%; max-width: 420px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-md);
-  max-height: calc(100vh - 32px);
-  display: flex; flex-direction: column;
-  overflow: hidden;
-}
-
-:deep(.modal-header) {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px; border-bottom: 1px solid var(--border);
-  flex-shrink: 0; gap: 12px;
-}
-
-:deep(.modal-title) { font-size: 18px; font-weight: 600; margin: 0; }
-
-:deep(.close-btn) {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 32px; height: 32px; flex-shrink: 0;
-  border: 1px solid var(--border); border-radius: var(--radius-sm);
-  background: var(--surface-soft); color: var(--text-muted);
-  cursor: pointer; transition: all 0.15s;
-}
-
-:deep(.close-btn:hover) { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
-
-:deep(.modal-body) { padding: 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px; }
-
-:deep(.modal-footer) { display: flex; gap: 8px; padding: 16px 20px; border-top: 1px solid var(--border); flex-shrink: 0; justify-content: flex-end; }
-
-:deep(.export-btn-cancel) {
-  display: inline-flex; align-items: center; justify-content: center;
-  padding: 0 16px; height: 36px;
-  border-radius: var(--radius-sm); border: 1px solid var(--border);
-  background: var(--surface); color: var(--text);
-  cursor: pointer; font-weight: 600; font-size: 13px;
-  transition: all 0.15s; white-space: nowrap;
-}
-
-:deep(.export-btn-cancel:hover) { background: var(--surface-soft); }
-
-:deep(.export-btn-confirm) {
-  display: inline-flex; align-items: center; justify-content: center;
-  padding: 0 16px; height: 36px;
-  border-radius: var(--radius-sm); border: 1px solid var(--primary);
-  background: var(--primary); color: white;
-  cursor: pointer; font-weight: 600; font-size: 13px;
-  transition: all 0.15s; white-space: nowrap;
-}
-
-:deep(.export-btn-confirm:hover) { filter: brightness(1.1); }
 
 .field {
   display: flex;

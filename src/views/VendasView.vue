@@ -21,8 +21,8 @@
 <div class="filtros">
       <input v-model="busca" placeholder="Buscar cliente ou produto..." class="input busca" />
       <div class="filtro-data">
-        <input type="date" v-model="dataInicio" />
-        <input type="date" v-model="dataFim" />
+        <input v-model="dataInicio" type="date" />
+        <input v-model="dataFim" type="date" />
       </div>
     </div>
 
@@ -124,7 +124,7 @@
       v-if="modalAberto"
       :produtos="produtos"
       :editando="!!vendaEditando"
-      :vendaInicial="vendaEditando"
+      :venda-inicial="vendaEditando"
       @fechar="fecharModal"
       @salvar="salvarVenda"
     />
@@ -134,7 +134,7 @@
       <div class="modal" role="dialog" aria-modal="true">
         <div class="modal-header">
           <h2 class="modal-title">Exportar Vendas</h2>
-          <button class="close-btn" @click="modalExportarAberto = false" aria-label="Fechar">
+          <button class="close-btn" aria-label="Fechar" @click="modalExportarAberto = false">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
@@ -145,17 +145,17 @@
           <div class="export-fields">
             <div class="field">
               <label>Data Início</label>
-              <input type="date" v-model="exportDataInicio" />
+              <input v-model="exportDataInicio" type="date" />
             </div>
             <div class="field">
               <label>Data Fim</label>
-              <input type="date" v-model="exportDataFim" />
+              <input v-model="exportDataFim" type="date" />
             </div>
           </div>
         </div>
         <div class="modal-footer">
           <button class="export-btn-cancel" @click="modalExportarAberto = false">Cancelar</button>
-          <button class="export-btn-confirm" @click="exportarExcel" :disabled="exportando || !exportDataInicio || !exportDataFim">
+          <button class="export-btn-confirm" :disabled="exportando || !exportDataInicio || !exportDataFim" @click="exportarExcel">
             {{ exportando ? 'Exportando...' : 'Exportar' }}
           </button>
         </div>
@@ -189,6 +189,71 @@ export default {
       dataFim: '',
       exportDataInicio: '',
       exportDataFim: ''
+    }
+  },
+
+  computed: {
+  vendasFiltradas() {
+    return [...this.vendas]
+      .sort((a, b) => {
+        const dataA = new Date(a.data_venda || 0).getTime()
+        const dataB = new Date(b.data_venda || 0).getTime()
+
+        if (dataA !== dataB) return dataB - dataA
+        return (b.id || 0) - (a.id || 0)
+      })
+      .filter(v => {
+
+        const termo = this.busca.toLowerCase()
+
+        const clienteMatch = (v.cliente || '')
+          .toLowerCase()
+          .includes(termo)
+
+        const produtoMatch = v.itens_venda_erp.some(i =>
+          i.produtos_erp.nome.toLowerCase().includes(termo)
+        )
+
+        const matchBusca = clienteMatch || produtoMatch
+
+        const dataVenda = v.data_venda?.split('T')[0]
+
+        const matchInicio = !this.dataInicio || dataVenda >= this.dataInicio
+        const matchFim = !this.dataFim || dataVenda <= this.dataFim
+
+        return matchBusca && matchInicio && matchFim
+      })
+  },
+
+  totalPaginas() {
+    return Math.max(1, Math.ceil(this.vendasFiltradas.length / this.itensPorPagina))
+  },
+
+  vendasPaginadas() {
+    const inicio = (this.paginaAtual - 1) * this.itensPorPagina
+    return this.vendasFiltradas.slice(inicio, inicio + this.itensPorPagina)
+  }
+  },
+
+  watch: {
+    busca() {
+      this.paginaAtual = 1
+    },
+
+    dataInicio() {
+      this.paginaAtual = 1
+    },
+
+    dataFim() {
+      this.paginaAtual = 1
+    },
+
+    itensPorPagina() {
+      this.paginaAtual = 1
+    },
+
+    vendas() {
+      this.ajustarPagina()
     }
   },
 
@@ -249,7 +314,7 @@ export default {
     },
 
     async buscarVendas() {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('vendas_erp')
         .select(`
           *,
@@ -265,6 +330,12 @@ export default {
         `)
         .order('data_venda', { ascending: false })
 
+      if (error) {
+        console.error(error)
+        alert('Erro ao carregar vendas')
+        return
+      }
+
       this.vendas = data || []
     },
 
@@ -272,6 +343,7 @@ export default {
       const { data } = await supabase
         .from('produtos_erp')
         .select('*')
+        .eq('ativo', true)
 
       this.produtos = data || []
       window.dispatchEvent(new Event('estoque-atualizado'))
@@ -574,71 +646,6 @@ export default {
         this.paginaAtual = this.totalPaginas
       }
     }
-  },
-
-  computed: {
-  vendasFiltradas() {
-    return [...this.vendas]
-      .sort((a, b) => {
-        const dataA = new Date(a.data_venda || 0).getTime()
-        const dataB = new Date(b.data_venda || 0).getTime()
-
-        if (dataA !== dataB) return dataB - dataA
-        return (b.id || 0) - (a.id || 0)
-      })
-      .filter(v => {
-
-        const termo = this.busca.toLowerCase()
-
-        const clienteMatch = (v.cliente || '')
-          .toLowerCase()
-          .includes(termo)
-
-        const produtoMatch = v.itens_venda_erp.some(i =>
-          i.produtos_erp.nome.toLowerCase().includes(termo)
-        )
-
-        const matchBusca = clienteMatch || produtoMatch
-
-        const dataVenda = v.data_venda?.split('T')[0]
-
-        const matchInicio = !this.dataInicio || dataVenda >= this.dataInicio
-        const matchFim = !this.dataFim || dataVenda <= this.dataFim
-
-        return matchBusca && matchInicio && matchFim
-      })
-  },
-
-  totalPaginas() {
-    return Math.max(1, Math.ceil(this.vendasFiltradas.length / this.itensPorPagina))
-  },
-
-  vendasPaginadas() {
-    const inicio = (this.paginaAtual - 1) * this.itensPorPagina
-    return this.vendasFiltradas.slice(inicio, inicio + this.itensPorPagina)
-  }
-  },
-
-  watch: {
-    busca() {
-      this.paginaAtual = 1
-    },
-
-    dataInicio() {
-      this.paginaAtual = 1
-    },
-
-    dataFim() {
-      this.paginaAtual = 1
-    },
-
-    itensPorPagina() {
-      this.paginaAtual = 1
-    },
-
-    vendas() {
-      this.ajustarPagina()
-    }
   }
 }
 </script>
@@ -709,7 +716,7 @@ table {
 }
 
 thead th {
-  background: #F1F5F9;
+  background: var(--surface-muted);
   text-align: left;
   padding: 8px 14px;
   color: var(--text-muted);

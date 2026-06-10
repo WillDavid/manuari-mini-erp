@@ -13,7 +13,7 @@
   --border-strong: #A8B3C4;
   --text: #1F2937;
   --text-muted: #667085;
-  --text-dim: #94A3B8;
+  --text-dim: #6F6F6F;
   --primary: #E86E1A;
   --primary-hover: #CC5F15;
   --primary-soft: #FEF0E7;
@@ -80,11 +80,18 @@ input::placeholder {
   font-weight: 400;
 }
 
-input:focus,
-select:focus {
+input:focus-visible,
+select:focus-visible {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(232, 110, 26, 0.1);
+}
+
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 select {

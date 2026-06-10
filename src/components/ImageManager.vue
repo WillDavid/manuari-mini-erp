@@ -6,14 +6,16 @@
         <img :src="img" />
 
         <div class="actions">
-          <button @click="remover(i)">✕</button>
-          <button @click="subir(i)">↑</button>
-          <button @click="descer(i)">↓</button>
+          <button aria-label="Remover imagem" @click="remover(i)">✕</button>
+          <button aria-label="Mover para cima" @click="subir(i)">↑</button>
+          <button aria-label="Mover para baixo" @click="descer(i)">↓</button>
         </div>
       </div>
     </div>
 
-    <input type="file" @change="onFileSelect" accept="image/*" />
+    <input type="file" accept="image/*" :disabled="enviando" @change="onFileSelect" />
+
+    <p v-if="enviando" class="enviando">Enviando imagem...</p>
 
     <ImageCropper
       v-if="cropperSrc"
@@ -32,13 +34,14 @@ import ImageCropper from './ImageCropper.vue'
 export default {
   components: { ImageCropper },
   
-  props: ['modelValue'],
+  props: { modelValue: { type: Array, default: () => [] } },
   emits: ['update:modelValue'],
 
   data() {
     return {
       cropperSrc: null,
-      pendingFile: null
+      pendingFile: null,
+      enviando: false,
     }
   },
 
@@ -67,33 +70,39 @@ export default {
 
       if (!file) return
 
-      const sanitizeFileName = (name) => {
-        return name
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .replace(/\s+/g, "_")
-          .replace(/[^a-zA-Z0-9._-]/g, "")
+      this.enviando = true
+
+      try {
+        const sanitizeFileName = (name) => {
+          return name
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/\s+/g, "_")
+            .replace(/[^a-zA-Z0-9._-]/g, "")
+        }
+
+        const cleanName = sanitizeFileName(file.name)
+        const tipo = this.$parent.local?.tipo || 'outros'
+        const path = `${tipo}/${Date.now()}-${cleanName}`
+
+        const { error } = await supabase.storage
+          .from('products')
+          .upload(path, blob, { upsert: true })
+
+        if (error) {
+          console.error(error)
+          alert(error.message)
+          return
+        }
+
+        const { data } = supabase.storage
+          .from('products')
+          .getPublicUrl(path)
+
+        this.atualizar([...this.modelValue, data.publicUrl])
+      } finally {
+        this.enviando = false
       }
-
-      const cleanName = sanitizeFileName(file.name)
-      const tipo = this.$parent.local?.tipo || 'outros'
-      const path = `${tipo}/${Date.now()}-${cleanName}`
-
-      const { error } = await supabase.storage
-        .from('products')
-        .upload(path, blob, { upsert: true })
-
-      if (error) {
-        console.error(error)
-        alert(error.message)
-        return
-      }
-
-      const { data } = supabase.storage
-        .from('products')
-        .getPublicUrl(path)
-
-      this.atualizar([...this.modelValue, data.publicUrl])
     },
 
     remover(i) {
@@ -167,5 +176,17 @@ input[type='file'] {
   border-radius: 12px;
   border: 1px dashed var(--border-strong);
   background: var(--surface-soft);
+}
+
+input[type='file']:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.enviando {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--primary);
+  font-weight: 600;
 }
 </style>

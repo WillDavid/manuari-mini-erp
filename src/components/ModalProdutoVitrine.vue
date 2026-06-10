@@ -1,9 +1,9 @@
 <template>
-  <div class="modal-overlay">
+   <div class="modal-overlay" @keydown.escape="$emit('fechar')">
     <div class="modal" role="dialog" aria-modal="true">
       <div class="modal-header">
         <h3 class="modal-title">{{ editando ? 'Editar Produto' : 'Novo Produto' }}</h3>
-        <button class="close-btn" :disabled="salvando" @click="$emit('fechar')" aria-label="Fechar">
+        <button class="close-btn" :disabled="salvando" aria-label="Fechar" @click="$emit('fechar')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>

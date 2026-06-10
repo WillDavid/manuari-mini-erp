@@ -1,10 +1,10 @@
 <template>
-  <div class="modal-overlay" @click.self="$emit('fechar')">
+   <div class="modal-overlay" @click.self="$emit('fechar')" @keydown.escape="$emit('fechar')">
     <div class="modal" role="dialog" aria-modal="true">
 
       <div class="modal-header">
         <h2 class="modal-title">{{ editando ? 'Editar Produto' : 'Novo Produto' }}</h2>
-        <button class="close-btn" @click="$emit('fechar')" aria-label="Fechar">
+        <button class="close-btn" aria-label="Fechar" @click="$emit('fechar')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
@@ -35,11 +35,11 @@
 
         <div class="field">
           <label>Estoque</label>
-          <input type="number" v-model.number="localProduto.estoque" />
+          <input v-model.number="localProduto.estoque" type="number" />
         </div>
 
         <div class="checkbox-row">
-          <input type="checkbox" v-model="localProduto.ativo" id="ativo-check" />
+          <input id="ativo-check" v-model="localProduto.ativo" type="checkbox" />
           <label for="ativo-check">Produto ativo</label>
         </div>
       </form>
@@ -48,7 +48,7 @@
         <button class="btn btn-primary" type="submit" :disabled="isLoading" @click="submit">
           {{ isLoading ? 'Processando...' : editando ? 'Atualizar' : 'Salvar' }}
         </button>
-        <button class="btn btn-ghost" type="button" @click="$emit('fechar')" :disabled="isLoading">Cancelar</button>
+        <button class="btn btn-ghost" type="button" :disabled="isLoading" @click="$emit('fechar')">Cancelar</button>
       </div>
 
     </div>
@@ -57,7 +57,8 @@
 
 <script>
 export default {
-  props: ['produto', 'editando'],
+  props: { produto: { type: Object, default: () => ({}) }, editando: { type: Boolean, default: false } },
+  emits: ['fechar', 'salvar'],
   data() { return { isLoading: false, localProduto: { ...this.produto } } },
   methods: {
     parseMoney(value) { if (!value) return 0; return parseFloat(value.toString().replace(',', '.')) || 0 },

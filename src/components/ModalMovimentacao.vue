@@ -1,32 +1,32 @@
 <template>
-  <div class="modal-overlay" @click.self="$emit('fechar')">
+   <div class="modal-overlay" @click.self="$emit('fechar')" @keydown.escape="$emit('fechar')">
     <div class="modal" role="dialog" aria-modal="true">
 
       <div class="modal-header">
         <h2 class="modal-title">{{ tipo === 'entrada' ? 'Entrada de Estoque' : 'Saída de Estoque' }}</h2>
-        <button class="close-btn" @click="$emit('fechar')" aria-label="Fechar">
+        <button class="close-btn" aria-label="Fechar" @click="$emit('fechar')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </button>
       </div>
 
-      <div class="modal-body">
+      <form class="modal-body" @submit.prevent="salvar">
         <div class="product-info">{{ produto.nome }}</div>
 
         <div class="field">
           <label>Quantidade</label>
-          <input type="number" v-model.number="quantidade" min="1" placeholder="0" />
+          <input v-model.number="quantidade" type="number" min="1" placeholder="0" />
         </div>
 
         <div class="field">
           <label>Observação</label>
           <input v-model="observacao" placeholder="—" />
         </div>
-      </div>
+      </form>
 
       <div class="modal-footer">
-        <button class="btn btn-primary" @click="salvar">Salvar</button>
+        <button class="btn btn-primary" type="submit" @click="salvar">Salvar</button>
         <button class="btn btn-ghost" @click="$emit('fechar')">Cancelar</button>
       </div>
 
@@ -36,7 +36,8 @@
 
 <script>
 export default {
-  props: ['produto', 'tipo'],
+  props: { produto: { type: Object, default: () => ({}) }, tipo: { type: String, default: 'entrada' } },
+  emits: ['fechar', 'salvar'],
   data() { return { quantidade: 1, observacao: '' } },
   methods: {
     salvar() {
