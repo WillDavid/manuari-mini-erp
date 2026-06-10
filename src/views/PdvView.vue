@@ -19,6 +19,20 @@
       </div>
     </header>
 
+    <!-- Sugestões rápidas -->
+    <div v-if="sugestoes.length && !busca" class="sugestoes-bar">
+      <span class="sugestoes-label">Populares:</span>
+      <button
+        v-for="p in sugestoes"
+        :key="p.id"
+        class="sugestao-chip"
+        @click="adicionar(p)"
+      >
+        {{ p.nome }}
+        <span class="sugestao-preco">R$ {{ formatarPreco(p.preco_venda) }}</span>
+      </button>
+    </div>
+
     <!-- === CONTEÚDO PRINCIPAL === -->
     <div class="pdv-body">
 
@@ -418,6 +432,13 @@ export default {
           || (p.codigo || '').toLowerCase().includes(termo)
       })
     },
+
+    sugestoes() {
+      return this.produtos
+        .filter(p => (p.totalVendido || 0) > 0)
+        .sort((a, b) => (b.totalVendido || 0) - (a.totalVendido || 0))
+        .slice(0, 5)
+    },
   },
 
   mounted() {
@@ -428,6 +449,10 @@ export default {
     formatar(valor) {
       if (valor === null || valor === undefined) return '0,00'
       return Number(valor).toFixed(2).replace('.', ',')
+    },
+
+    formatarPreco(valor) {
+      return this.formatar(valor)
     },
 
     async buscarProdutos() {
@@ -1018,6 +1043,57 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Sugestões rápidas */
+.sugestoes-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-03);
+  padding: var(--sp-03) var(--sp-05);
+  overflow-x: auto;
+  flex-shrink: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sugestoes-label {
+  font-size: var(--fs-label);
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sugestao-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-02);
+  padding: var(--sp-02) var(--sp-04);
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: var(--fs-body);
+  color: var(--text);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+  font-family: inherit;
+}
+
+.sugestao-chip:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  transform: scale(1.03);
+}
+
+.sugestao-chip:active {
+  transform: scale(0.97);
+}
+
+.sugestao-preco {
+  font-weight: 600;
+  color: var(--primary);
 }
 
 /* ===== BODY ===== */

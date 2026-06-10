@@ -6,6 +6,8 @@
         <span class="version">v{{ versao }}</span>
       </router-link>
 
+      <GlobalSearch />
+
       <nav :class="['nav', { open: menuAberto }]">
         <router-link to="/pdv" class="link" active-class="active" @click="fecharMenus">
           PDV
@@ -89,10 +91,12 @@
 
 <script>
 import logo from '../assets/manuari-logotipo-300dpi.png'
+import GlobalSearch from './GlobalSearch.vue'
 import { supabase } from '../services/supabase'
 import pkg from '../../package.json'
 
 export default {
+  components: { GlobalSearch },
   data() {
     return {
       menuAberto: false,
