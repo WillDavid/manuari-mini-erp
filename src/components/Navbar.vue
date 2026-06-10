@@ -33,6 +33,10 @@
       </nav>
 
       <div class="actions">
+        <button class="cmd-btn" @click="abrirCommand" title="Comandos (⌘K)" aria-label="Abrir busca de comandos">
+          <span>⌘K</span>
+        </button>
+
         <div v-if="itensBaixoEstoque.length" class="alert-wrapper">
           <button class="alert-btn" :class="{ active: alertasAbertos }" aria-label="Alertas de estoque baixo" :aria-expanded="alertasAbertos" @click.stop="alternarAlertas">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -118,6 +122,10 @@ export default {
   },
 
   methods: {
+    abrirCommand() {
+      window.dispatchEvent(new KeyboardEvent('keydown', { metaKey: true, key: 'k' }))
+    },
+
     async buscarAlertasEstoque() {
       const { data, error } = await supabase
         .from('produtos_erp')
@@ -246,6 +254,29 @@ export default {
 
 .alert-wrapper {
   position: relative;
+}
+
+.cmd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 var(--sp-03);
+  border-radius: var(--radius-sm);
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: 0.5px;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.cmd-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .alert-btn {

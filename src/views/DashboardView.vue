@@ -168,6 +168,7 @@
         <div v-for="(insight, i) in insights" :key="i" class="alerta-item" :class="insight.tipo">
           <span class="alerta-icon">{{ insight.tipo === 'positivo' ? '↑' : insight.tipo === 'negativo' ? '↓' : '•' }}</span>
           <span class="alerta-texto">{{ insight.texto }}</span>
+          <router-link v-if="insight.acao" :to="insight.acao" class="alerta-acao">{{ insight.acaoLabel || 'Ver' }}</router-link>
         </div>
         <div v-if="!insights.length" class="alerta-item neutro">
           <span class="alerta-icon">•</span>
@@ -406,22 +407,22 @@ export default {
       if (this.vendasFiltradas.length === 0) return lista
 
       if (crescimentoFaturamento > 20) {
-        lista.push({ tipo: 'positivo', texto: `Faturamento cresceu ${crescimentoFaturamento.toFixed(1)}% em relação ao período anterior.` })
+        lista.push({ tipo: 'positivo', texto: `Faturamento cresceu ${crescimentoFaturamento.toFixed(1)}% em relação ao período anterior.`, acao: '/vendas', acaoLabel: 'Ver vendas' })
       } else if (crescimentoFaturamento < -20) {
-        lista.push({ tipo: 'negativo', texto: `Faturamento caiu ${Math.abs(crescimentoFaturamento).toFixed(1)}% em relação ao período anterior. Atenção!` })
+        lista.push({ tipo: 'negativo', texto: `Faturamento caiu ${Math.abs(crescimentoFaturamento).toFixed(1)}% em relação ao período anterior. Atenção!`, acao: '/vendas', acaoLabel: 'Analisar' })
       }
 
       if (margemLucro > 50) {
         lista.push({ tipo: 'positivo', texto: `Margem de lucro está excelente: ${margemLucro.toFixed(1)}%.` })
       } else if (margemLucro < 20 && faturamento > 0) {
-        lista.push({ tipo: 'negativo', texto: `Margem de lucro baixa: ${margemLucro.toFixed(1)}%. Verifique os custos.` })
+        lista.push({ tipo: 'negativo', texto: `Margem de lucro baixa: ${margemLucro.toFixed(1)}%. Verifique os custos.`, acao: '/produtos', acaoLabel: 'Revisar custos' })
       }
 
       const top = this.rankingProdutos[0]
       if (top && top.receita > 0 && faturamento > 0) {
         const participacao = (top.receita / faturamento) * 100
         if (participacao > 50) {
-          lista.push({ tipo: 'info', texto: `"${top.nome}" representa ${participacao.toFixed(1)}% do faturamento.` })
+          lista.push({ tipo: 'info', texto: `"${top.nome}" representa ${participacao.toFixed(1)}% do faturamento.`, acao: '/vendas', acaoLabel: 'Ver vendas' })
         }
       }
 
@@ -431,9 +432,9 @@ export default {
         )
       })
       if (produtosSemVenda.length > 0 && produtosSemVenda.length <= 3) {
-        lista.push({ tipo: 'negativo', texto: `Produtos sem venda no período: ${produtosSemVenda.map(p => p.nome).join(', ')}.` })
+        lista.push({ tipo: 'negativo', texto: `Produtos sem venda no período: ${produtosSemVenda.map(p => p.nome).join(', ')}.`, acao: '/estoque', acaoLabel: 'Ver estoque' })
       } else if (produtosSemVenda.length > 3) {
-        lista.push({ tipo: 'negativo', texto: `${produtosSemVenda.length} produtos sem venda no período. Considere promoções.` })
+        lista.push({ tipo: 'negativo', texto: `${produtosSemVenda.length} produtos sem venda no período. Considere promoções.`, acao: '/estoque', acaoLabel: 'Ver estoque' })
       }
 
       return lista
@@ -883,6 +884,25 @@ tr.destaque td:first-child {
 
 .alerta-texto {
   color: var(--text);
+  flex: 1;
+}
+
+.alerta-acao {
+  font-size: var(--fs-label);
+  font-weight: 600;
+  color: var(--info);
+  text-decoration: none;
+  padding: var(--sp-01) var(--sp-03);
+  border-radius: var(--radius-sm);
+  background: var(--info-soft);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background var(--transition-fast);
+}
+
+.alerta-acao:hover {
+  background: var(--info);
+  color: white;
 }
 
 .field {
