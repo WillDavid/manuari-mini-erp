@@ -4,15 +4,17 @@
       <img :src="logo" alt="Manuari" class="logo" />
 
       <h1>Bem-vindo</h1>
-      <p>Digite a senha para continuar</p>
+       <p id="login-hint">Digite a senha para continuar</p>
 
       <form @submit.prevent="identifyUser">
         <input
+          ref="passwordInput"
           v-model="password"
           type="password"
           placeholder="Senha"
           class="input"
           aria-label="Senha de acesso"
+          aria-describedby="login-hint"
           required
         />
 
@@ -50,30 +52,24 @@ data() {
     }
   },
 
-  methods: {
-    async identifyUser() {
+   methods: {
+    identifyUser() {
       if (this.isLoading) return
 
       if (this.password !== SENHA_CORRETA) {
         this.erro = 'Senha incorreta'
         this.password = ''
+        this.$nextTick(() => this.$refs.passwordInput?.focus())
         return
       }
 
       this.isLoading = true
       this.erro = ''
 
-      try {
-        await new Promise(resolve => setTimeout(resolve, 300))
-
-        const expiresAt = Date.now() + (DIAS_LOGADO * 24 * 60 * 60 * 1000)
-        localStorage.setItem('authExpires', expiresAt.toString())
-        this.$router.push('/pdv')
-      } catch {
-        this.erro = 'Erro ao entrar. Tente novamente.'
-      } finally {
-        this.isLoading = false
-      }
+      const expiresAt = Date.now() + (DIAS_LOGADO * 24 * 60 * 60 * 1000)
+      localStorage.setItem('authExpires', expiresAt.toString())
+      this.$router.push('/pdv')
+      this.isLoading = false
     }
   }
 }

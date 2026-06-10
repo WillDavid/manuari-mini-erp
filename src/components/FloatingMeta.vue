@@ -49,7 +49,7 @@
     </div>
 
     <!-- MODAL CONFIG METAS -->
-     <div v-if="configAberto" class="modal-overlay" @click.self="configAberto = false" @keydown.escape="configAberto = false">
+     <div v-if="configAberto" class="modal-overlay" @click.self="configAberto = false">
       <div class="modal" role="dialog" aria-modal="true">
         <div class="modal-header">
           <h2 class="modal-title">Metas Mensais {{ anoConfig }}</h2>
@@ -149,6 +149,11 @@ export default {
   mounted() {
     this.buscarFaturamento()
     this.buscarMetas()
+    this._escKey = (e) => { if (e.key === 'Escape' && this.configAberto) this.configAberto = false }
+    document.addEventListener('keydown', this._escKey)
+  },
+  beforeUnmount() {
+    document.removeEventListener('keydown', this._escKey)
   },
 
   methods: {

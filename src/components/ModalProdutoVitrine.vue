@@ -1,5 +1,5 @@
 <template>
-   <div class="modal-overlay" @keydown.escape="$emit('fechar')">
+   <div class="modal-overlay" @click.self="!salvando && $emit('fechar')">
     <div class="modal" role="dialog" aria-modal="true">
       <div class="modal-header">
         <h3 class="modal-title">{{ editando ? 'Editar Produto' : 'Novo Produto' }}</h3>
@@ -66,7 +66,7 @@
           <div class="form-group full-width">
             <div class="section-header">
               <div>
-                <label>Variacoes</label>
+                <label>Variações</label>
                 <p>Cadastre combinacoes, precos fixos e faixas por variacao.</p>
               </div>
               <button class="btn ghost small" type="button" @click="adicionarVariacao">
@@ -133,7 +133,7 @@
                     >
                       <div class="form-group compact">
                         <label>Preco</label>
-                        <input v-model="preco.preco" type="number" min="0" step="0.01" />
+                        <input v-model="preco.preco" type="text" inputmode="decimal" placeholder="0,00" />
                       </div>
                       <div class="form-group compact small-field">
                         <label>Ordem</label>
@@ -181,7 +181,7 @@
                       <div class="inline-inputs triple">
                         <div class="form-group compact">
                           <label>Preco</label>
-                          <input v-model="faixa.preco" type="number" min="0" step="0.01" />
+                          <input v-model="faixa.preco" type="text" inputmode="decimal" placeholder="0,00" />
                         </div>
                         <div class="form-group compact small-field">
                           <label>Ordem</label>
@@ -207,7 +207,7 @@
         <div class="coluna-direita">
           <div class="form-group sticky-panel">
             <label>Imagens</label>
-            <ImageManager v-model="local.images" />
+            <ImageManager v-model="local.images" :tipo="local.tipo" />
           </div>
         </div>
       </div>
@@ -314,6 +314,14 @@ export default {
         this.local = this.getProdutoInicial()
       },
     },
+  },
+
+  mounted() {
+    this._escKey = (e) => { if (e.key === 'Escape') this.$emit('fechar') }
+    document.addEventListener('keydown', this._escKey)
+  },
+  beforeUnmount() {
+    document.removeEventListener('keydown', this._escKey)
   },
 
   methods: {
@@ -442,6 +450,14 @@ export default {
       variacao.vitrine_precos_faixas.splice(index, 1)
     },
 
+    parseMoneyInput(val) {
+      return String(val || '').replace('.', ',')
+    },
+
+    parseMoneyValue(val) {
+      return parseFloat(String(val || '0').replace(',', '.')) || 0
+    },
+
     salvar() {
       const payload = {
         ...this.local,
@@ -455,10 +471,12 @@ export default {
           ordem: Number(variacao.ordem) || index + 1,
           vitrine_precos: variacao.vitrine_precos.map((preco, precoIndex) => ({
             ...preco,
+            preco: this.parseMoneyValue(preco.preco),
             ordem: Number(preco.ordem) || precoIndex + 1,
           })),
           vitrine_precos_faixas: variacao.vitrine_precos_faixas.map((faixa, faixaIndex) => ({
             ...faixa,
+            preco: this.parseMoneyValue(faixa.preco),
             quantidade_label: (faixa.quantidade_label || '').trim(),
             quantidade_minima: Number(faixa.quantidade_minima) || 1,
             ordem: Number(faixa.ordem) || faixaIndex + 1,

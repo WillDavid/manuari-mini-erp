@@ -1,5 +1,5 @@
 <template>
-   <div class="cropper-overlay" @keydown.escape="$emit('cancel')">
+   <div class="cropper-overlay">
     <div class="cropper-modal">
       <div class="cropper-header">
         <h4>Cortar Imagem</h4>
@@ -41,6 +41,14 @@ export default {
   
   props: { src: { type: String, default: '' } },
   emits: ['cancel', 'crop'],
+
+  mounted() {
+    this._escKey = (e) => { if (e.key === 'Escape') this.$emit('cancel') }
+    document.addEventListener('keydown', this._escKey)
+  },
+  beforeUnmount() {
+    document.removeEventListener('keydown', this._escKey)
+  },
 
   methods: {
     save() {

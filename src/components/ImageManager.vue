@@ -34,7 +34,10 @@ import ImageCropper from './ImageCropper.vue'
 export default {
   components: { ImageCropper },
   
-  props: { modelValue: { type: Array, default: () => [] } },
+  props: {
+    modelValue: { type: Array, default: () => [] },
+    tipo: { type: String, default: '' },
+  },
   emits: ['update:modelValue'],
 
   data() {
@@ -82,7 +85,7 @@ export default {
         }
 
         const cleanName = sanitizeFileName(file.name)
-        const tipo = this.$parent.local?.tipo || 'outros'
+        const tipo = this.tipo || this.$parent?.local?.tipo || 'outros'
         const path = `${tipo}/${Date.now()}-${cleanName}`
 
         const { error } = await supabase.storage

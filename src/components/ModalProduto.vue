@@ -1,5 +1,5 @@
 <template>
-   <div class="modal-overlay" @click.self="$emit('fechar')" @keydown.escape="$emit('fechar')">
+   <div class="modal-overlay" @click.self="$emit('fechar')">
     <div class="modal" role="dialog" aria-modal="true">
 
       <div class="modal-header">
@@ -11,45 +11,47 @@
         </button>
       </div>
 
-      <form class="modal-body" @submit.prevent="submit">
-        <div class="field">
-          <label>Nome do Produto</label>
-          <input v-model="localProduto.nome" required />
-        </div>
-
-        <div class="field">
-          <label>Código</label>
-          <input v-model="localProduto.codigo" />
-        </div>
-
-        <div class="form-row">
+      <form @submit.prevent="submit">
+        <div class="modal-body">
           <div class="field">
-            <label>Preço Custo (R$)</label>
-            <input v-model="localProduto.preco_custo" />
+            <label>Nome do Produto</label>
+            <input v-model="localProduto.nome" required />
           </div>
+
           <div class="field">
-            <label>Preço de Venda (R$)</label>
-            <input v-model="localProduto.preco_venda" required />
+            <label>Código</label>
+            <input v-model="localProduto.codigo" />
+          </div>
+
+          <div class="form-row">
+            <div class="field">
+              <label>Preço Custo (R$)</label>
+              <input v-model="localProduto.preco_custo" inputmode="decimal" />
+            </div>
+            <div class="field">
+              <label>Preço de Venda (R$)</label>
+              <input v-model="localProduto.preco_venda" inputmode="decimal" required />
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Estoque</label>
+            <input v-model.number="localProduto.estoque" type="number" />
+          </div>
+
+          <div class="checkbox-row">
+            <input id="ativo-check" v-model="localProduto.ativo" type="checkbox" />
+            <label for="ativo-check">Produto ativo</label>
           </div>
         </div>
 
-        <div class="field">
-          <label>Estoque</label>
-          <input v-model.number="localProduto.estoque" type="number" />
-        </div>
-
-        <div class="checkbox-row">
-          <input id="ativo-check" v-model="localProduto.ativo" type="checkbox" />
-          <label for="ativo-check">Produto ativo</label>
+        <div class="modal-footer">
+          <button class="btn btn-primary" type="submit" :disabled="isLoading">
+            {{ isLoading ? 'Processando...' : editando ? 'Atualizar' : 'Salvar' }}
+          </button>
+          <button class="btn btn-ghost" type="button" :disabled="isLoading" @click="$emit('fechar')">Cancelar</button>
         </div>
       </form>
-
-      <div class="modal-footer">
-        <button class="btn btn-primary" type="submit" :disabled="isLoading" @click="submit">
-          {{ isLoading ? 'Processando...' : editando ? 'Atualizar' : 'Salvar' }}
-        </button>
-        <button class="btn btn-ghost" type="button" :disabled="isLoading" @click="$emit('fechar')">Cancelar</button>
-      </div>
 
     </div>
   </div>
@@ -60,6 +62,13 @@ export default {
   props: { produto: { type: Object, default: () => ({}) }, editando: { type: Boolean, default: false } },
   emits: ['fechar', 'salvar'],
   data() { return { isLoading: false, localProduto: { ...this.produto } } },
+  mounted() {
+    this._escKey = (e) => { if (e.key === 'Escape') this.$emit('fechar') }
+    document.addEventListener('keydown', this._escKey)
+  },
+  beforeUnmount() {
+    document.removeEventListener('keydown', this._escKey)
+  },
   methods: {
     parseMoney(value) { if (!value) return 0; return parseFloat(value.toString().replace(',', '.')) || 0 },
     async submit() {

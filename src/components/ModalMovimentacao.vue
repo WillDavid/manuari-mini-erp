@@ -1,5 +1,5 @@
 <template>
-   <div class="modal-overlay" @click.self="$emit('fechar')" @keydown.escape="$emit('fechar')">
+   <div class="modal-overlay" @click.self="$emit('fechar')">
     <div class="modal" role="dialog" aria-modal="true">
 
       <div class="modal-header">
@@ -11,24 +11,30 @@
         </button>
       </div>
 
-      <form class="modal-body" @submit.prevent="salvar">
-        <div class="product-info">{{ produto.nome }}</div>
+      <form @submit.prevent="salvar">
+        <div class="modal-body">
+          <div class="product-info">{{ produto.nome }}</div>
 
-        <div class="field">
-          <label>Quantidade</label>
-          <input v-model.number="quantidade" type="number" min="1" placeholder="0" />
+          <div class="field">
+            <label>Quantidade</label>
+            <input v-model.number="quantidade" type="number" min="1" placeholder="0" autofocus />
+          </div>
+
+          <div class="field">
+            <label>Observação</label>
+            <input v-model="observacao" placeholder="—" />
+          </div>
+
+          <div class="stock-preview">
+            Estoque atual: {{ produto.estoque }} → Novo: {{ produto.estoque + (tipo === 'entrada' ? quantidade : -quantidade) }}
+          </div>
         </div>
 
-        <div class="field">
-          <label>Observação</label>
-          <input v-model="observacao" placeholder="—" />
+        <div class="modal-footer">
+          <button class="btn btn-primary" type="submit">Salvar</button>
+          <button class="btn btn-ghost" type="button" @click="$emit('fechar')">Cancelar</button>
         </div>
       </form>
-
-      <div class="modal-footer">
-        <button class="btn btn-primary" type="submit" @click="salvar">Salvar</button>
-        <button class="btn btn-ghost" @click="$emit('fechar')">Cancelar</button>
-      </div>
 
     </div>
   </div>
@@ -39,6 +45,13 @@ export default {
   props: { produto: { type: Object, default: () => ({}) }, tipo: { type: String, default: 'entrada' } },
   emits: ['fechar', 'salvar'],
   data() { return { quantidade: 1, observacao: '' } },
+  mounted() {
+    this._escKey = (e) => { if (e.key === 'Escape') this.$emit('fechar') }
+    document.addEventListener('keydown', this._escKey)
+  },
+  beforeUnmount() {
+    document.removeEventListener('keydown', this._escKey)
+  },
   methods: {
     salvar() {
       if (!this.quantidade || this.quantidade <= 0) { alert('Quantidade inválida'); return }
@@ -95,6 +108,16 @@ export default {
 .field { display: flex; flex-direction: column; gap: 4px; }
 .field label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
 .field input { font-size: 13px; }
+
+.stock-preview {
+  background: var(--info-soft);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--info);
+  font-size: 12px;
+  color: var(--info);
+  font-weight: 500;
+}
 
 .modal-footer { display: flex; gap: 8px; padding: 16px 20px; border-top: 1px solid var(--border); flex-shrink: 0; }
 

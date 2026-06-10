@@ -1,5 +1,5 @@
 <template>
-   <div class="modal-overlay" @click.self="$emit('fechar')" @keydown.escape="$emit('fechar')">
+   <div class="modal-overlay" @click.self="$emit('fechar')">
     <div class="modal" role="dialog" aria-modal="true">
 
       <div class="modal-header">
@@ -105,6 +105,13 @@ export default {
     }
   },
   computed: { mostrarParcelas() { return this.venda.forma_pagamento === 'Credito' } },
+  mounted() {
+    this._escKey = (e) => { if (e.key === 'Escape') this.$emit('fechar') }
+    document.addEventListener('keydown', this._escKey)
+  },
+  beforeUnmount() {
+    document.removeEventListener('keydown', this._escKey)
+  },
   methods: {
     getHoje() { return new Date().toISOString().split('T')[0] },
     formatar(v) { return Number(v || 0).toFixed(2).replace('.', ',') },
