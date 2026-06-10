@@ -326,7 +326,7 @@ export default {
     },
 
     verDetalhes(produto) {
-      this.$router.push(`/vitrine/detalhes/${produto.id}`)
+      this.editar(produto)
     },
 
     fechar() {

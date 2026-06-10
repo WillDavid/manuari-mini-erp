@@ -631,14 +631,6 @@ export default {
 
         window.dispatchEvent(new Event('estoque-atualizado'))
 
-        this.preview.cliente = this.preview?.cliente
-        this.preview.total_bruto = this.preview?.total_bruto
-        this.preview.desconto = this.preview?.desconto
-        this.preview.total_final = this.preview?.total_final
-        this.preview.forma_pagamento = this.preview?.forma_pagamento
-        this.preview.parcelas = this.preview?.parcelas
-        this.preview.itens = this.preview?.itens
-
         this.vendaConfirmada = true
 
         this.carrinho = []

@@ -514,12 +514,13 @@ export default {
           this.dataInicio = inicioMes(new Date())
           this.dataFim = hojeStr
           break
-        case 'mes_anterior':
+        case 'mes_anterior': {
           const mesAnterior = new Date()
           mesAnterior.setMonth(mesAnterior.getMonth() - 1)
           this.dataInicio = inicioMes(mesAnterior)
           this.dataFim = fimMes(mesAnterior)
           break
+        }
         case 'ano_atual':
           this.dataInicio = inicioAno(new Date())
           this.dataFim = hojeStr

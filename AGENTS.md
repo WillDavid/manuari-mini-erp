@@ -28,8 +28,12 @@ Sistema ERP single-page para o negócio "Manuari", desenvolvido com Vue 3 (Optio
 | Crop Imagens | vue-advanced-cropper | ^2.8.9 |
 | Fonte | Inter (Google Fonts) | — |
 | Deploy | Vercel (SPA rewrite) | — |
+| Lint | ESLint + Prettier | ^9.x |
+| Unit Tests | Vitest + @vue/test-utils | ^4.x |
+| E2E Tests | Playwright | ^1.x |
+| TypeScript | tsconfig (allowJs, checkJs: false) | ^5.x |
 
-**NÃO utiliza:** TypeScript, Composition API, Vuex/Pinia, REST API, ESLint, Prettier, Jest/Vitest, Cypress (dir existe mas vazio), Docker, env vars (.env), qualquer biblioteca de UI components.
+**NÃO utiliza:** Composition API, `<script setup>`, Pinia, REST API, Docker, env vars (.env), biblioteca de UI components.
 
 ---
 
@@ -1054,7 +1058,13 @@ methods: { atualizar(v) { this.$emit('update:modelValue', v) } }
 {
   "dev": "vite",
   "build": "vite build",
-  "preview": "vite preview"
+  "preview": "vite preview",
+  "lint": "eslint src --ext .vue,.js --fix",
+  "format": "prettier --write src",
+  "test": "vitest run",
+  "test:watch": "vitest",
+  "test:e2e": "playwright test",
+  "test:e2e:ui": "playwright test --ui"
 }
 ```
 
