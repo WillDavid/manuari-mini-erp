@@ -972,7 +972,7 @@ button:hover {
 
 :deep(.modal) {
   background: var(--surface);
-  width: 100%; max-width: 420px;
+  width: 100%; max-width: 600px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-md);

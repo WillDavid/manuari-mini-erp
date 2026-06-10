@@ -26,7 +26,7 @@
         <div class="add-row">
           <select v-model="produtoSelecionado">
             <option disabled value="">Selecione um produto</option>
-            <option v-for="p in produtos" :key="p.id" :value="p">
+            <option v-for="p in produtos" :key="p.id" :value="p.id">
               {{ p.nome }} — R$ {{ formatar(p.preco_venda) }}
             </option>
           </select>
@@ -111,14 +111,16 @@ export default {
     onFormaPagamentoChange() { if (!this.mostrarParcelas) this.venda.parcelas = 1 },
     adicionarProduto() {
       if (!this.produtoSelecionado) return
-      const existente = this.venda.itens.find(i => i.produto_id === this.produtoSelecionado.id)
+      const produto = this.produtos.find(p => p.id === this.produtoSelecionado)
+      if (!produto) return
+      const existente = this.venda.itens.find(i => i.produto_id === produto.id)
       if (existente) { existente.quantidade++; this.atualizar(existente) }
       else {
         this.venda.itens.push({
-          produto_id: this.produtoSelecionado.id,
-          nome: this.produtoSelecionado.nome,
-          preco: this.produtoSelecionado.preco_venda,
-          quantidade: 1, subtotal: this.produtoSelecionado.preco_venda
+          produto_id: produto.id,
+          nome: produto.nome,
+          preco: produto.preco_venda,
+          quantidade: 1, subtotal: produto.preco_venda
         })
       }
       this.recalcular(); this.produtoSelecionado = ''
@@ -152,7 +154,7 @@ export default {
 
 .modal {
   background: var(--surface);
-  width: 100%; max-width: 1024px;
+  width: 100%; max-width: 1280px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-md);
