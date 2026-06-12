@@ -85,9 +85,8 @@ export default {
         }
 
         const cleanName = sanitizeFileName(file.name)
-        const rawTipo = this.tipo || this.$parent?.local?.tipo || 'outros'
-        const folderName = sanitizeFileName(rawTipo.toLowerCase())
-        const path = `${folderName}/${Date.now()}-${cleanName}`
+        const tipo = this.tipo || this.$parent?.local?.tipo || 'outros'
+        const path = `${tipo}/${Date.now()}-${cleanName}`
 
         const { error } = await supabase.storage
           .from('products')
