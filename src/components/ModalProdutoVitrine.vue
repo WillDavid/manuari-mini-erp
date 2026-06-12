@@ -18,19 +18,10 @@
 
         <div class="form-section">
           <label>Tipo</label>
-          <div class="row-inputs">
-            <select v-model="local.tipo" class="flex-1">
-              <option disabled value="">Selecione</option>
-              <option v-for="tipo in tipos" :key="tipo" :value="tipo">{{ tipo }}</option>
-            </select>
-            <input
-              v-model="novoTipo"
-              placeholder="Novo tipo"
-              class="flex-1"
-              @keydown.enter.prevent="adicionarTipo"
-            />
-            <button class="btn ghost" type="button" @click="adicionarTipo">Adicionar</button>
-          </div>
+          <select v-model="local.tipo">
+            <option disabled value="">Selecione</option>
+            <option v-for="tipo in tipos" :key="tipo" :value="tipo">{{ tipo }}</option>
+          </select>
         </div>
 
         <div class="form-section">
