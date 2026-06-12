@@ -213,8 +213,8 @@ const TIPOS_PADRAO = [
   'canecas',
   'xicaras',
   'azulejos',
-  'canecas 3d',
   'bottons',
+  'acessorios',
 ]
 
 const CATEGORIAS_PADRAO = [
