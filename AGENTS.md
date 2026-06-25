@@ -4,7 +4,7 @@
 
 ## 1. VISÃO GERAL
 
-Sistema ERP single-page para o negócio "Manuari", desenvolvido com Vue 3 (Options API), Vite 8, Supabase (PostgreSQL + Storage) e JavaScript puro. A aplicação gerencia produtos, vendas, estoque e uma vitrine de produtos personalizados com variações, preços e faixas de preço.
+Sistema ERP single-page para o negócio "Manuari", desenvolvido com Vue 3 (Options API), Vite 8, Supabase (PostgreSQL + Storage) e JavaScript puro. A aplicação gerencia produtos, vendas, estoque, uma vitrine de produtos personalizados com variações, preços e faixas de preço, além de dashboard com KPIs e PDV mobile-first com PWA.
 
 **Repositório GitHub:** `https://github.com/WillDavid/manuari-mini-erp`
 **URL Supabase:** `https://byriesholblgyysnmnpu.supabase.co`
@@ -17,20 +17,20 @@ Sistema ERP single-page para o negócio "Manuari", desenvolvido com Vue 3 (Optio
 
 | Categoria | Tecnologia | Versão |
 |-----------|-----------|--------|
-| Framework | Vue 3 (Options API) | ^3.5.30 |
-| Build | Vite | ^8.0.1 |
-| Plugin Vue | @vitejs/plugin-vue | ^6.0.5 |
-| Roteamento | vue-router (createWebHistory) | ^5.0.4 |
-| Backend/DB | Supabase (PostgreSQL) | ^2.101.1 |
-| Gráficos | ECharts + vue-echarts | ^6.0.0 / ^8.0.1 |
+| Framework | Vue 3 (Options API) | ^3.5.39 |
+| Build | Vite | ^8.1.0 |
+| Plugin Vue | @vitejs/plugin-vue | ^6.0.7 |
+| Roteamento | vue-router (createWebHistory) | ^5.1.0 |
+| Backend/DB | Supabase (PostgreSQL) | ^2.108.2 |
+| Gráficos | ECharts + vue-echarts | ^6.1.0 / ^8.0.1 |
 | Excel | xlsx | ^0.18.5 |
-| PDF | jspdf + jspdf-autotable | ^2.5 / ^5.0 |
+| PDF | jspdf + jspdf-autotable | ^4.2.1 / ^5.0.8 |
 | Crop Imagens | vue-advanced-cropper | ^2.8.9 |
 | Fonte | Inter (Google Fonts) | — |
 | Deploy | Vercel (SPA rewrite) | — |
-| Lint | ESLint + Prettier | ^9.x |
-| Unit Tests | Vitest + @vue/test-utils | ^4.x |
-| E2E Tests | Playwright | ^1.x |
+| Lint | ESLint + Prettier | ^10.5.0 / ^3.8.4 |
+| Unit Tests | Vitest + @vue/test-utils | ^4.1.9 / ^2.4.11 |
+| E2E Tests | Playwright | ^1.61.1 |
 | TypeScript | tsconfig (allowJs, checkJs: false) | ^5.x |
 
 **NÃO utiliza:** Composition API, `<script setup>`, Pinia, REST API, Docker, env vars (.env), biblioteca de UI components.
@@ -42,36 +42,44 @@ Sistema ERP single-page para o negócio "Manuari", desenvolvido com Vue 3 (Optio
 ```
 vue-manuari-erp/
 ├── .gitignore                          # Ignora node_modules, dist, logs, .vscode exceto extensions.json
+├── .prettierrc                         # Configuração do Prettier
 ├── .vscode/
 │   └── extensions.json                 # Recomenda Vue.volar
 ├── AGENTS.md                           # Este arquivo
+├── PROMPT_AUDITORIA.md                 # Prompt para auditoria de código
 ├── README.md                           # Template padrão Vite (não específico)
+├── eslint.config.js                    # ESLint flat config
 ├── index.html                          # Entry point HTML, lang=pt-BR, Inter font, noindex meta
 ├── package.json                        # Dependências e scripts (dev, build, preview)
-├── vite.config.js                      # Mínimo — apenas plugin Vue
+├── tsconfig.json                       # TypeScript config (allowJs, checkJs: false)
 ├── vercel.json                         # Rewrite todas rotas para / (SPA)
+├── vite.config.js                      # Mínimo — apenas plugin Vue
+├── vitest.config.js                    # Configuração do Vitest
+├── playwright.config.js                # Configuração do Playwright
 ├── favicon.svg                         # Ícone gradiente roxo
 ├── icons.svg                           # Ícones SVG
 ├── public/
 │   ├── favicon.svg
-│   └── icons.svg
+│   ├── icons.svg
+│   ├── sw.js                           # Service Worker para PWA offline
+│   └── manifest.json                   # Manifesto PWA (instalação mobile)
 ├── supabase/
 │   └── migrations/
 │       └── vitrine_acessos.sql          # Migration SQL para tabela de acessos + funções
 ├── src/
-│   ├── main.js                         # Cria app Vue, usa router, importa style.css
+│   ├── main.js                         # Cria app Vue, usa router, importa style.css, registra SW
 │   ├── App.vue                         # Componente raiz: Navbar + <router-view>
 │   ├── style.css                       # Reset CSS + design tokens + estilos globais
 │   ├── assets/
 │   │   └── manuari-logotipo-300dpi.png # Logo da marca
 │   ├── router/
-│   │   └── index.js                    # 7 rotas + guard de autenticação
+│   │   └── index.js                    # 8 rotas + guard de autenticação
 │   ├── services/
 │   │   └── supabase.js                 # Cliente Supabase com URL/key hardcoded
 │   ├── utils/
-│   │   ├── actions.js                  # Utilitários de ação (NÃO USADO em nenhum lugar)
 │   │   └── exportacao.js              # Geração de Excel para vendas
 │   ├── views/
+│   │   ├── DashboardView.vue          # Dashboard com KPIs, rankings, exportação PDF/Excel
 │   │   ├── ProdutosView.vue           # CRUD de produtos ERP
 │   │   ├── VendasView.vue             # Gestão de vendas + exportação Excel
 │   │   ├── EstoqueView.vue            # Controle de estoque (entrada/saída)
@@ -80,16 +88,14 @@ vue-manuari-erp/
 │   └── components/
 │       ├── UserIdentifier.vue          # Tela de login (senha fixa)
 │       ├── Navbar.vue                  # Header com navegação + alerta de estoque baixo
+│       ├── CommandPalette.vue          # Paleta de comando (Cmd+K) com busca e atalhos
+│       ├── FloatingMeta.vue            # Widget flutuante de metas mensais
 │       ├── ModalProduto.vue            # Form de criar/editar produto ERP
 │       ├── ModalVenda.vue             # Form de criar/editar venda
 │       ├── ModalMovimentacao.vue      # Form de entrada/saída de estoque
-│       ├── ModalProdutoVitrine.vue    # Form COMPLEXO de produto vitrine (777 linhas)
+│       ├── ModalProdutoVitrine.vue    # Form COMPLEXO de produto vitrine (687 linhas)
 │       ├── ImageManager.vue           # Gerenciador de upload de imagens
-│       ├── ImageCropper.vue           # Modal de crop de imagem (quadrado 1:1, 800px min)
-│       ├── ModalContaPagar.vue        # Form de conta a pagar (NÃO USADO)
-│       ├── ModalMovimentacaoFinanceira.vue # Form financeiro receber/pagar (NÃO USADO)
-│       ├── EChartWidget.vue           # Wrapper ECharts reutilizável (NÃO USADO)
-│       └── GraficoAcessos.vue         # Gráfico de barras CSS puro (NÃO USADO)
+│       └── ImageCropper.vue           # Modal de crop de imagem (quadrado 1:1, 800px min)
 ```
 
 ---
@@ -99,7 +105,7 @@ vue-manuari-erp/
 ### Fluxo
 1. **Login:** `UserIdentifier.vue` possui senha hardcoded: `const SENHA_CORRETA = 'tuti@123'`
 2. Ao digitar senha correta → grava `localStorage.setItem('authExpires', Date.now() + 30 dias)`
-3. Redireciona para `/vendas`
+3. Redireciona para `/pdv`
 4. Senha incorreta → mostra erro, limpa campo
 
 ### Router Guard (`src/router/index.js:22-33`)
@@ -108,12 +114,12 @@ router.beforeEach((to, from, next) => {
   const expiration = localStorage.getItem('authExpires')
   const isLogged = expiration && Date.now() < parseInt(expiration)
   if (to.meta.requiresAuth && !isLogged) next('/identificar')
-  else if (to.path === '/identificar' && isLogged) next('/vendas')
+  else if (to.path === '/identificar' && isLogged) next('/pdv')
   else next()
 })
 ```
 
-### Logout (`Navbar.vue:134-137`)
+### Logout (`Navbar.vue`)
 ```js
 localStorage.removeItem('authExpires')
 this.$router.push('/identificar')
@@ -124,6 +130,7 @@ this.$router.push('/identificar')
 - Sem hashing, sem JWT do Supabase
 - Sem proteção server-side
 - Chave anon do Supabase exposta (por design, com RLS)
+- Auth via localStorage é trivialmente bypassável via DevTools
 
 ---
 
@@ -131,15 +138,14 @@ this.$router.push('/identificar')
 
 | Caminho | Componente | Auth | Descrição |
 |---------|-----------|------|-----------|
-| `/` | — | Não | Redireciona → `/identificar` |
+| `/` | — | Não | Redireciona → `/pdv` |
 | `/identificar` | UserIdentifier | Não | Login / tela de senha |
+| `/dashboard` | DashboardView | Sim | Dashboard com KPIs e rankings |
 | `/produtos` | ProdutosView | Sim | CRUD de produtos do ERP |
 | `/vendas` | VendasView | Sim | Vendas + exportação Excel |
 | `/estoque` | EstoqueView | Sim | Controle de estoque (entrada/saída) |
 | `/vitrine` | VitrineView | Sim | Vitrine de produtos personalizados |
 | `/pdv` | PdvView | Sim | PDV mobile-first com PWA |
-
-**BUG:** `VitrineView.vue:329` chama `this.$router.push('/vitrine/detalhes/${produto.id}')` mas esta rota NÃO existe no router.
 
 ---
 
@@ -273,27 +279,29 @@ A versão do sistema é definida em `package.json` no campo `version` (atualment
 1. **Componente local (`data()`):** Principal abordagem. Cada view mantém seus próprios dados.
 2. **Props down / Events up:** Comunicação pai-filho via `$emit()`.
 3. **`window.dispatchEvent`:** Comunicação cross-component.
-   - Evento `'estoque-atualizado'`: Disparado por ProdutosView, EstoqueView, VendasView
+   - Evento `'estoque-atualizado'`: Disparado por ProdutosView, EstoqueView, VendasView, PdvView, DashboardView
    - Navbar escuta e recarrega alertas de estoque baixo
+   - Evento `'abrir-paleta'`: Disparado pelo Navbar para abrir CommandPalette
 4. **`localStorage`:** Apenas `authExpires` (timestamp de expiração de login).
 
 ---
 
 ## 8. COMPONENTES — DETALHAMENTO COMPLETO
 
-### 8.1 App.vue (14 linhas)
-Apenas renderiza `<Navbar />` e `<router-view />`. Sem lógica.
+### 8.1 App.vue (20 linhas)
+Apenas renderiza `<Navbar />` e `<router-view />`. Inclui um listener para evento `'abrir-paleta'` que controla a CommandPalette globalmente.
 
-### 8.2 UserIdentifier.vue (169 linhas)
+### 8.2 UserIdentifier.vue (165 linhas)
 - **Template:** Overlay full-screen com card centralizado. Logo + título "Bem-vindo" + input password + botão "Entrar".
 - **Lógica:** Compara senha digitada com `SENHA_CORRETA`. Delay artificial de 300ms. Salva `authExpires` no localStorage.
-- **mounted():** Se já autenticado, redireciona para `/vendas`.
+- **mounted():** Se já autenticado, redireciona para `/pdv`.
 - **CSS:** Overlay fixo z-index 9999, card max-width 380px, gradiente laranja no botão.
 
-### 8.3 Navbar.vue (451 linhas)
+### 8.3 Navbar.vue (529 linhas)
 - **Template:** Header sticky (top 0, z-index 30, height 52px). Contém:
-  - Logo com link para `/vendas`
-  - Nav links: Vendas, Estoque, Produtos, Vitrine (cada um com active-class)
+  - Logo com link para `/pdv`
+  - Nav links: Dashboard, Vendas, Estoque, Produtos, Vitrine, PDV (cada um com active-class)
+  - Botão de comando (Cmd+K) — abre CommandPalette
   - Botão de alerta (sino) com badge numérico e dropdown de produtos com estoque ≤ 3
   - Botão hamburger (mobile) — toggle `menuAberto`
   - Botão logout
@@ -304,14 +312,26 @@ Apenas renderiza `<Navbar />` e `<router-view />`. Sem lógica.
   - `watch: '$route.fullPath'`: Fecha menus e recarrega alertas ao mudar rota
 - **CSS:** Responsivo — em mobile o nav vira dropdown absoluto (200px), links viram blocos verticais, alert dropdown desloca `right: -16px`
 
-### 8.4 ModalProduto.vue (154 linhas)
+### 8.4 CommandPalette.vue (319 linhas)
+- **Template:** Overlay escuro com input de busca centralizado. Lista de comandos filtrados com ícones e descrições. Navegação por setas (↑↓) e Enter.
+- **Atalho:** Cmd+K (macOS) / Ctrl+K (Windows) abre a paleta. Esc fecha.
+- **Comandos:** Navegação entre todas as rotas, ações rápidas (Nova Venda, Novo Produto, etc.).
+- **CSS:** Usa variáveis CSS personalizadas (`--sp-03`, `--text-secondary`, etc.) — atualmente não definidas globalmente, resultando em fallback para valores padrão.
+
+### 8.5 FloatingMeta.vue (552 linhas)
+- **Template:** Widget flutuante e arrastável (drag) que exibe metas mensais de faturamento.
+- **Lógica:** Busca dados da tabela `metas_mensais` no Supabase (tabela NÃO existe no banco — feature quebrada).
+- Exibe progresso com barra colorida, valor atual vs meta.
+- **CSS:** Posicionamento fixo, drag via eventos de mouse/touch.
+
+### 8.6 ModalProduto.vue (164 linhas)
 - **Props:** `produto` (Object), `editando` (Boolean)
 - **Emits:** `fechar`, `salvar`
 - **Campos:** Nome, Código, Preço Custo, Preço Venda (formato moeda com vírgula), Estoque (number), Ativo (checkbox)
 - **Lógica:** `parseMoney()` converte vírgula → ponto antes de emitir `salvar`. Validação: `preco_venda > 0`.
 - **CSS:** Modal padrão (overlay + card 420px), grid 2 colunas para preços, responsivo (1 coluna mobile).
 
-### 8.5 ModalVenda.vue (241 linhas)
+### 8.7 ModalVenda.vue (251 linhas)
 - **Props:** `produtos` (Array), `editando` (Boolean), `vendaInicial` (Object)
 - **Emits:** `fechar`, `salvar`
 - **Campos:** Cliente (text), Data (date, default hoje), Select de produto, Lista de itens (nome, qtd, preço unit, subtotal, remover), Total, Desconto %, Total Final, Forma Pagamento (Pix/Dinheiro/Credito), Parcelas (1-12x, visível só em Credito)
@@ -319,17 +339,17 @@ Apenas renderiza `<Navbar />` e `<router-view />`. Sem lógica.
   - Produto já adicionado → incrementa quantidade
   - Produto novo → adiciona à lista com `produto_id, nome, preco, quantidade, subtotal`
   - `recalcular()`: Soma subtotais → total_bruto, aplica desconto % → total_final
-- **Submit:** Emite `salvar` com o objeto venda. O pai (VendasView) faz toda a lógica de persistência.
+- **Submit:** Emite `salvar` com o objeto venda. O pai (VendasView/PdvView) faz toda a lógica de persistência.
 - **CSS:** Grid 2 colunas para cliente/data, linha de item com 5 colunas (1fr 64px 80px 80px 32px), summary card com fundo soft.
 
-### 8.6 ModalMovimentacao.vue (116 linhas)
+### 8.8 ModalMovimentacao.vue (140 linhas)
 - **Props:** `produto` (Object), `tipo` ('entrada' | 'saida')
 - **Emits:** `fechar`, `salvar`
 - **Campos:** Nome do produto (display), Quantidade (number, default 1), Observação (text)
 - **Validação:** Quantidade deve ser > 0
 - **CSS:** Modal 380px, sem complexidade.
 
-### 8.7 ModalProdutoVitrine.vue (777 linhas) — COMPONENTE MAIS COMPLEXO
+### 8.9 ModalProdutoVitrine.vue (687 linhas) — COMPONENTE MAIS COMPLEXO
 
 #### Template (2 colunas):
 ```
@@ -376,7 +396,7 @@ Apenas renderiza `<Navbar />` e `<router-view />`. Sem lógica.
 ```
 
 #### Constantes:
-- **TIPOS_PADRAO:** `['canecas', 'xicaras', 'azulejos', 'canecas 3d', 'bottons']`
+- **TIPOS_PADRAO:** `['canecas', 'xicaras', 'azulejos', 'acessorios', 'bottons']`
 - **CATEGORIAS_PADRAO:** 22 categorias (Futebol, Capivara, Frases Engraçadas, Anime, Filmes & Series, Gatos, Animais, Norte, Estados Brasileiros, Profissoes, Arte, Frases Motivacionais, Fantasia, Sao Paulo, Doramas, Aliens & Ufologia, Desenhos, Herois, Mapa, Plantas, Musica, Envie Sua Arte)
 - **tiposVariacao:** `['cor', 'tamanho', 'modelo', 'material', 'acabamento', 'outro']`
 
@@ -422,7 +442,7 @@ Apenas renderiza `<Navbar />` e `<router-view />`. Sem lógica.
 - `adicionarCategoria()`: Adiciona ao array se não existir.
 - `salvar()`: Normaliza todo o payload — trims, Number(), Boolean() — e emite `salvar`.
 
-### 8.8 ImageManager.vue (171 linhas)
+### 8.10 ImageManager.vue (195 linhas)
 - **Props:** `modelValue` (Array de URLs)
 - **Emits:** `update:modelValue`
 - **Template:** Grid de cards de imagem (100×100px) cada um com botões ✕ ↑ ↓. Input file. Modal de crop.
@@ -437,7 +457,7 @@ Apenas renderiza `<Navbar />` e `<router-view />`. Sem lógica.
   8. Pega URL pública e adiciona ao array
 - **Reorder:** `subir(i)` / `descer(i)` trocam posições no array.
 
-### 8.9 ImageCropper.vue (141 linhas)
+### 8.11 ImageCropper.vue (149 linhas)
 - **Props:** `src` (String — data URL da imagem)
 - **Emits:** `cancel`, `crop`
 - **Template:** Overlay dark (rgba 0.85) + modal 900px max. Header com título "Cortar Imagem" + ✕. Corpo com Cropper. Footer com Cancelar + Salvar Corte.
@@ -448,34 +468,47 @@ Apenas renderiza `<Navbar />` e `<router-view />`. Sem lógica.
   - imageRestriction: 'stencil'
 - **Save:** `getResult()` → `canvas.toBlob('image/jpeg', 0.9)` → emite `crop` com o blob.
 
-### 8.10 ModalContaPagar.vue (188 linhas) — NÃO INTEGRADO
-- Form com: Descricao, Valor, Vencimento, Forma Pagamento (Dinheiro/Transferencia/Debito automatico)
-- Emite `salvar` e `fechar`. Nenhuma view o utiliza.
-
-### 8.11 ModalMovimentacaoFinanceira.vue (273 linhas) — NÃO INTEGRADO
-- Form com toggle Receber/Pagar, Descricao, Valor, Data, Forma Pagamento (varia conforme tipo), Parcelas (1-12x, só receber)
-- Emite `salvar` e `fechar`. Nenhuma view o utiliza.
-
-### 8.12 EChartWidget.vue (270 linhas) — NÃO INTEGRADO
-- Wrapper reutilizável para ECharts. Suporta 4 tipos: line, bar, pie, donut.
-- Props: type, title, data, height, colors, showArea, smooth, stacked, radius.
-- Usa `use()` para registrar CanvasRenderer, LineChart, BarChart, PieChart, Title, Tooltip, Legend, Grid, DataZoom.
-- **Formato de dados esperado:** `[{ label, total/value }]`
-- Cores padrão: laranja (#E86E1A), azul, verde, roxo, rosa, teal, amarelo, ciano.
-
-### 8.13 GraficoAcessos.vue (264 linhas) — NÃO INTEGRADO
-- Gráfico de barras usando CSS puro (não ECharts).
-- Props: `titulo`, `dados` (array com `{ data, dias, total }`)
-- Selector de período: 7, 30, 90 dias.
-- Barras com gradiente laranja (primary → primary-hover), altura proporcional ao valor máximo.
-- Footer com estatísticas: Total, Média/dia, Maior dia.
-- Emite `periodo` ao mudar.
-
 ---
 
 ## 9. VIEWS — DETALHAMENTO COMPLETO
 
-### 9.1 ProdutosView.vue (552 linhas)
+### 9.1 DashboardView.vue (978 linhas)
+
+#### Visão Geral
+Dashboard central com indicadores de performance (KPIs), rankings de produtos/clientes e exportação de relatórios.
+
+#### KPIs calculados:
+- **Faturamento:** Soma de `total_final` de vendas do mês atual
+- **Margem de lucro:** Média da margem (preço_venda - preco_custo) / preco_venda
+- **Quantidade vendida:** Soma de quantidades dos itens vendidos no mês
+- **Nº de pedidos:** Total de vendas no mês
+- **Crescimento:** Comparação faturamento mês atual vs mês anterior
+
+#### Rankings:
+- **Top 10 Produtos:** Por receita total gerada
+- **Top 5 Clientes:** Por frequência de compras
+- Produtos sem venda (estoque parado)
+
+#### Exportação:
+- **PDF:** Relatório com logo, KPIs, rankings e tabela de vendas
+- **Excel:** Planilha com dados brutos de vendas do período
+
+#### Queries Supabase:
+```js
+// Vendas do mês (para KPIs)
+supabase.from('vendas_erp').select('*, itens_venda_erp(*, produtos_erp(nome, preco_custo))')
+  .gte('data_venda', inicioMes)
+  .lte('data_venda', fimMes)
+  .order('data_venda', { ascending: true })
+
+// Produtos (para margem)
+supabase.from('produtos_erp').select('*').eq('ativo', true)
+
+// Todas as vendas (para rankings completos)
+supabase.from('vendas_erp').select('*, itens_venda_erp(*, produtos_erp(nome))')
+```
+
+### 9.2 ProdutosView.vue (594 linhas)
 
 #### Queries Supabase:
 ```js
@@ -515,7 +548,7 @@ supabase.from('produtos_erp').delete().eq('id', id)
 - `itensPorPagina`: reseta página para 1
 - `produtos`: ajusta página se atual > total
 
-### 9.2 VendasView.vue (964 linhas) — VIEW MAIS COMPLEXA
+### 9.3 VendasView.vue (1050 linhas) — VIEW MAIS COMPLEXA
 
 #### Queries Supabase:
 
@@ -532,9 +565,8 @@ supabase.from('vendas_erp').select(`
 
 **Buscar produtos (para select no modal):**
 ```js
-supabase.from('produtos_erp').select('*')
+supabase.from('produtos_erp').select('*').eq('ativo', true)
 ```
-(NOTA: busca TODOS os produtos, inclusive inativos — possível bug)
 
 **Exportar Excel (query separada com filtro de data):**
 ```js
@@ -594,7 +626,7 @@ supabase.from('vendas_erp').select(`
 
 #### Watchers: busca, dataInicio, dataFim, itensPorPagina → resetam página para 1. vendas → ajusta página.
 
-### 9.3 EstoqueView.vue (505 linhas)
+### 9.4 EstoqueView.vue (603 linhas)
 
 #### Query Supabase:
 ```js
@@ -620,7 +652,7 @@ supabase.from('produtos_erp').select('*').eq('ativo', true).order('nome')
 
 #### Watchers: Igual ProdutosView (busca, itensPorPagina → reset página 1; produtos → ajusta página)
 
-### 9.4 VitrineView.vue (1213 linhas) — SEGUNDA VIEW MAIS COMPLEXA
+### 9.5 VitrineView.vue (1237 linhas) — SEGUNDA VIEW MAIS COMPLEXA
 
 #### Query Supabase:
 ```js
@@ -632,9 +664,9 @@ Ordena por `created_at` (Mais novos) ou `acessos` (Mais relevantes).
 
 #### Funcionalidades:
 - Tabela: Produto (thumb + nome + tipo), Categorias (chips), Variações (contagem + nomes), Preços (N fixos + N faixas), Acessos, Ações
-- **Ações:** Ver (BUG — rota inexistente), Editar, Duplicar, Excluir
+- **Ações:** Editar, Duplicar, Excluir
 - Busca: nome, tipo, categorias, variações
-- Load/error states: `carregando`, `erro` (VitrineView é a única view com tratamento de loading/erro)
+- Load/error states: `carregando`, `erro`
 
 #### CRUD:
 
@@ -676,7 +708,7 @@ Ordena por `created_at` (Mais novos) ou `acessos` (Mais relevantes).
 
 #### Watchers: busca, itensPorPagina → reset página 1; produtos → ajusta página; ordenacao → recarrega dados.
 
-### 9.5 PdvView.vue (nova) — PDV Mobile-first com PWA
+### 9.6 PdvView.vue — PDV Mobile-first com PWA
 
 #### Visão Geral
 Tela de Ponto de Venda (PDV) projetada mobile-first, com foco em UX rápida para celular. Permite buscar produtos, adicionar ao carrinho e finalizar a venda em poucos toques. Também funciona como PWA (instalável no celular).
@@ -728,11 +760,19 @@ supabase.from('itens_venda_erp').insert(itens)
 supabase.from('produtos_erp').select('estoque').eq('id', id).single()
 supabase.from('produtos_erp').update({ estoque }).eq('id', id)
 supabase.from('estoque_movimentacoes').insert([mov])
+
+// Buscar total vendido por produto (para ordenação por popularidade)
+supabase.from('itens_venda_erp').select('produto_id, quantidade') // ⚠️ sem filtro — baixa TODOS os registros
 ```
 
 #### Eventos
 - Dispara `window.dispatchEvent(new Event('estoque-atualizado'))` após finalizar venda (Navbar recarrega alertas)
 - `navigator.vibrate(10)` ao adicionar produto ao carrinho
+
+#### Service Worker (PWA)
+- Registrado em `src/main.js` com auto-update
+- Cache de assets para funcionamento offline
+- Estratégia: network-first com fallback para cache
 
 ---
 
@@ -787,7 +827,6 @@ Todos os modais seguem a mesma estrutura:
   </div>
 </div>
 ```
-Exceções: ModalContaPagar e ModalMovimentacaoFinanceira usam classes diferentes (`.close` em vez de `.close-btn`, `.primary`/`.secondary` em vez de `.btn-primary`/`.btn-ghost`).
 
 ### 10.4 Pagination pattern
 Todas as views com tabela usam o mesmo padrão:
@@ -847,7 +886,7 @@ methods: { atualizar(v) { this.$emit('update:modelValue', v) } }
   --border-strong: #A8B3C4;
   --text: #1F2937;
   --text-muted: #667085;
-  --text-dim: #94A3B8;
+  --text-dim: #6F6F6F;
   --primary: #E86E1A;          /* Laranja Manuari */
   --primary-hover: #CC5F15;
   --primary-soft: #FEF0E7;
@@ -887,7 +926,7 @@ methods: { atualizar(v) { this.$emit('update:modelValue', v) } }
 - Responsivo (≤768px): tabelas viram cards (display:block, labels via `::before { content: attr(data-label) }`), modals full-width, grids viram 1 coluna
 
 ### 11.4 Inconsistências de CSS
-- ModalContaPagar e ModalMovimentacaoFinanceira usam classes diferentes (`.primary`/`.secondary` em vez de `.btn-primary`/`.btn-ghost`)
+- CommandPalette usa variáveis CSS que não existem no `:root` (`--sp-03`, `--text-secondary`, `--layer-hover`, `--fs-body`, `--fs-label`, `--text-placeholder`, `--transition-fast`) — componente visualmente quebrado
 - Alguns componentes não usam variáveis CSS para cores (ex: `#F1F5F9` hardcoded para header de tabela)
 - Alguns usam `border-radius: 12px` ou `14px` em vez dos tokens `--radius-sm/md/lg`
 - Z-index inconsistente: modais usam 2000, overlay de login usa 9999
@@ -896,13 +935,7 @@ methods: { atualizar(v) { this.$emit('update:modelValue', v) } }
 
 ## 12. UTILITÁRIOS
 
-### 12.1 actions.js (121 linhas) — NÃO UTILIZADO
-- `blockDuplicate(prefix)`: Cria um blocker de operações duplicadas com Map interno
-- `createActionHandler(component, options)`: Cria handler async com loading state, success/error messages via alert()
-- `handleAsync(component, actionName, asyncFn, options)`: Similar ao acima, ligeiramente diferente
-- **Nenhum componente importa ou usa essas funções.**
-
-### 12.2 exportacao.js (157 linhas) — USADO POR VendasView
+### 12.1 exportacao.js (170 linhas) — USADO POR VendasView E DashboardView
 - `formatarMoeda(value)`: `Number(v).toFixed(2).replace('.', ',')`
 - `formatarData(data)`: ISO → DD/MM/YYYY
 - `ratearDesconto(itens, descontoPercentual, totalBruto)`: Distribui desconto proporcionalmente, último item recebe ajuste de arredondamento
@@ -1013,25 +1046,20 @@ methods: { atualizar(v) { this.$emit('update:modelValue', v) } }
 
 ## 14. BUGS E ISSUES CONHECIDOS
 
-1. **Rota inexistente:** `VitrineView.vue:329` — `this.$router.push('/vitrine/detalhes/${produto.id}')` — rota não definida, causa erro silencioso ou redirect para /identificar
-2. **ModalContaPagar e ModalMovimentacaoFinanceira não integrados:** Componentes existem, emitem eventos, mas nenhuma view os utiliza. Tabelas `contas_pagar` e `movimentacoes_financeiras` também não existem.
-3. **EChartWidget e GraficoAcessos não integrados:** Componentes de gráfico prontos mas não usados em nenhuma view.
-4. **actions.js não utilizado:** Funções `blockDuplicate`, `createActionHandler`, `handleAsync` escritas mas nunca importadas.
-5. **Sem paginação server-side:** Todas as queries usam `select('*')` sem `range()` ou `limit()`, carregando todos os registros do banco.
-6. **VendasView busca TODOS os produtos:** `buscarProdutos()` faz `select('*')` sem filtro `ativo=true`, incluindo produtos inativos no select da venda.
+1. **FloatingMeta consulta tabela `metas_mensais` que não existe no banco:** Nenhuma migration cria esta tabela. O recurso de metas é silenciosamente quebrado.
+2. **PdvView baixa TODOS os `itens_venda_erp` sem filtro:** Na inicialização, a view carrega todo o histórico de itens vendidos para calcular popularidade. Sem paginação ou filtro de data, é extremamente ineficiente com muitos registros.
+3. **CommandPalette usa CSS variables indefinidas:** `--sp-03`, `--text-secondary`, `--layer-hover`, `--fs-body`, `--fs-label`, `--text-placeholder`, `--transition-fast` não estão definidas em `style.css` — componente renderiza incorretamente.
+4. **Sem rollback transacional em vendas:** Se a inserção de itens ou atualização de estoque falha parcialmente, não há mecanismo de rollback. O estoque pode ficar inconsistente.
+5. **Senha hardcoded no source code:** `const SENHA_CORRETA = 'tuti@123'` em `UserIdentifier.vue:34`. Auth via localStorage é trivialmente bypassável.
+6. **Sem paginação server-side:** Todas as queries usam `select('*')` sem `range()` ou `limit()`, carregando todos os registros do banco.
 7. **ImageManager.$parent.local?.tipo:** Acoplamento frágil — depende da estrutura interna do componente pai (ModalProdutoVitrine). Se usado em outro contexto, quebra.
-8. **Indentação inconsistente:**
-   - A maioria dos arquivos usa 2 espaços
-   - `VendasView.vue:301-469` (método `salvarVenda`) e `VendasView.vue:471-537` (método `excluirVenda`) usam indentação diferente (mistura de 2 e 4 espaços)
-   - `ModalProdutoVitrine.vue` usa 2 espaços consistente
-   - `ModalContaPagar.vue:99` — `data()` indentado errado (sem indentação)
-   - `ModalMovimentacaoFinanceira.vue:99` — `data()` indentado errado (sem indentação)
-9. **Sem tratamento de erro em várias queries:** `VendasView.buscarVendas()` e `VendasView.buscarProdutos()` não checam `error`. `ProdutosView` checa `!error` mas não mostra feedback ao usuário.
-10. **ModalVenda.submit() usa Promise wrapper desnecessário:** `await new Promise(resolve => this.$emit('salvar', this.venda))` — o `$emit` é síncrono e não retorna promise.
-11. **VitrineView não tem confirmação ao excluir:** Diferente de ProdutosView e VendasView que usam `confirm()`, VitrineView deleta diretamente (embora cheque `this.salvando`).
-12. **Falta `parcelas` no payload de VendasView:** O campo `parcelas` da venda não é enviado no payload de insert/update em `vendas_erp`. Só `forma_pagamento` é salvo.
-13. **Sem CASCADE real no delete da vitrine:** Embora a migration defina ON DELETE CASCADE, o `excluirVariacoes()` no frontend deleta manualmente faixas → preços → variações antes de deletar o produto.
-14. **ModalVenda.forma_pagamento salvo como string não normalizada:** "Credito" (com C maiúsculo) vs "credito" pode causar inconsistências.
+8. **VendasView `temDesconto` verifica array inteiro em vez da linha atual:** Coluna de desconto aparece/esconde baseada em qualquer venda com desconto, não na linha atual.
+9. **Sem tratamento de erro em várias queries:** `ProdutosView.salvarProduto()` e `deletarProduto()` não verificam erros do Supabase antes de fechar modal.
+10. **Método vazio `recalcular()` em PdvView:** `recalcular() { // força reatividade do computed }` — computed properties já são reativas, método desnecessário.
+11. **Constantes duplicadas:** `TIPOS_PADRAO` e `CATEGORIAS_PADRAO` definidas identicamente em `VitrineView.vue` e `ModalProdutoVitrine.vue` — deveriam ser compartilhadas.
+12. **`formatarMoeda`/`formatarPreco`/`formatarData` duplicados:** Quase toda view e componente define seus próprios métodos de formatação.
+13. **Falta `parcelas` no payload em alguns fluxos:** O campo `parcelas` da venda pode não ser enviado em insert/update.
+14. **Import inconsistente do jspdf-autotable:** Estático (`import { autoTable }`) no PdvView vs dinâmico (`await import('jspdf-autotable')`) no DashboardView.
 
 ---
 
@@ -1041,7 +1069,7 @@ methods: { atualizar(v) { this.$emit('update:modelValue', v) } }
 |----------|-----------|----------|
 | Componentes | PascalCase | `ModalVenda.vue`, `UserIdentifier.vue` |
 | Views | PascalCase + sufixo "View" | `ProdutosView.vue`, `VendasView.vue` |
-| Utilitários | camelCase | `exportacao.js`, `actions.js` |
+| Utilitários | camelCase | `exportacao.js` |
 | Serviços | camelCase | `supabase.js` |
 | Métodos | camelCase (português) | `buscarVendas()`, `salvarProduto()`, `fecharModal()` |
 | Variáveis | camelCase (português) | `modalAberto`, `vendaEditando`, `itensPorPagina` |
@@ -1089,13 +1117,15 @@ Todas as rotas são reescritas para `/` para suportar SPA client-side routing.
 | View/Componente | Tabela | Operação | Join/Filtro |
 |-----------------|--------|----------|-------------|
 | Navbar | produtos_erp | select | ativo=true, order=estoque asc |
+| DashboardView | vendas_erp | select * | join itens + produtos, gte/lte data, mês atual |
+| DashboardView | produtos_erp | select * | ativo=true |
 | ProdutosView | produtos_erp | select * | order=created_at desc |
 | ProdutosView | produtos_erp | insert | — |
 | ProdutosView | produtos_erp | update | eq id |
 | ProdutosView | produtos_erp | delete | eq id |
 | VendasView (lista) | vendas_erp | select * | join itens_venda_erp→produtos_erp(nome) |
 | VendasView (export) | vendas_erp | select | join itens + produtos, gte/lte data |
-| VendasView (produtos) | produtos_erp | select * | sem filtro ⚠️ |
+| VendasView (produtos) | produtos_erp | select * | eq ativo=true |
 | VendasView (salvar) | vendas_erp | insert | — |
 | VendasView (salvar) | itens_venda_erp | insert (batch) | — |
 | VendasView (salvar) | produtos_erp | select (single) | eq id (estoque) |
@@ -1121,11 +1151,13 @@ Todas as rotas são reescritas para `/` para suportar SPA client-side routing.
 | ImageManager | storage products | upload | upsert |
 | ImageManager | storage products | getPublicUrl | — |
 | PdvView | produtos_erp | select * | ativo=true, order=nome |
+| PdvView | itens_venda_erp | select | sem filtro ⚠️ (popularidade) |
 | PdvView | vendas_erp | insert | — |
 | PdvView | itens_venda_erp | insert (batch) | — |
 | PdvView | produtos_erp | select (single) | eq id (estoque) |
 | PdvView | produtos_erp | update | eq id (estoque) |
 | PdvView | estoque_movimentacoes | insert | — |
+| FloatingMeta | metas_mensais | select * | ⚠️ tabela não existe |
 
 ---
 
@@ -1133,13 +1165,13 @@ Todas as rotas são reescritas para `/` para suportar SPA client-side routing.
 
 | Evento | Disparado por | Escutado por | Propósito |
 |--------|--------------|-------------|-----------|
-| `estoque-atualizado` (window) | ProdutosView, EstoqueView, VendasView, PdvView | Navbar | Atualizar alertas de estoque baixo |
+| `estoque-atualizado` (window) | ProdutosView, EstoqueView, VendasView, PdvView, DashboardView | Navbar | Atualizar alertas de estoque baixo |
+| `abrir-paleta` (window) | Navbar (Cmd+K) | App.vue | Abrir CommandPalette |
 | `fechar` (emit) | Todos os modais | Views pai | Fechar modal |
 | `salvar` (emit) | Todos os modais | Views pai | Persistir dados |
 | `update:modelValue` (emit) | ImageManager | ModalProdutoVitrine | v-model sync |
 | `crop` (emit) | ImageCropper | ImageManager | Imagem cortada |
 | `cancel` (emit) | ImageCropper | ImageManager | Cancelar crop |
-| `periodo` (emit) | GraficoAcessos | (não usado) | Notificar mudança de período |
 
 ---
 

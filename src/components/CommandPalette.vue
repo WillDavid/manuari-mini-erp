@@ -10,13 +10,13 @@
           v-model="busca"
           type="text"
           placeholder="Digite um comando..."
-          @keydown="navegar"
           class="palette-input"
+          @keydown="navegar"
         />
         <kbd class="palette-kbd">esc</kbd>
       </div>
 
-      <div class="palette-results" v-if="resultados.length">
+      <div v-if="resultados.length" class="palette-results">
         <div v-for="(grupo, gIdx) in resultados" :key="gIdx" class="palette-group">
           <div class="palette-group-label">{{ grupo.label }}</div>
           <div

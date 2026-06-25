@@ -85,6 +85,12 @@
         </div>
 
         <div class="kpi-card">
+          <div class="kpi-label">Custo</div>
+          <div class="kpi-value">R$ {{ formatarMoeda(kpis.custoTotal) }}</div>
+          <div class="kpi-trend subtle">do período</div>
+        </div>
+
+        <div class="kpi-card">
           <div class="kpi-label">Qtd. Vendida</div>
           <div class="kpi-value">{{ kpis.quantidade }}</div>
           <div class="kpi-trend subtle">unidades</div>
@@ -101,8 +107,17 @@
           <div class="kpi-value">R$ {{ formatarMoeda(kpis.ticketMedio) }}</div>
           <div class="kpi-trend subtle">por pedido</div>
         </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Vendas / Dia</div>
+          <div class="kpi-value">R$ {{ formatarMoeda(kpis.vendasPorDia) }}</div>
+          <div class="kpi-trend subtle">média do período</div>
+        </div>
       </div>
     </div>
+
+    <!-- GRÁFICO -->
+    <SalesEvolutionChart ref="chartRef" :data="faturamentoDiario" :loading="carregando" :growth="kpis.crescimentoFaturamento" />
 
     <!-- RANKINGS -->
     <div class="rankings-grid">
@@ -161,27 +176,12 @@
       </div>
     </div>
 
-    <!-- ALERTAS / INSIGHTS -->
-    <div class="alertas-section">
-      <div class="table-title">Insights Automáticos</div>
-      <div class="alertas-list">
-        <div v-for="(insight, i) in insights" :key="i" class="alerta-item" :class="insight.tipo">
-          <span class="alerta-icon">{{ insight.tipo === 'positivo' ? '↑' : insight.tipo === 'negativo' ? '↓' : '•' }}</span>
-          <span class="alerta-texto">{{ insight.texto }}</span>
-          <router-link v-if="insight.acao" :to="insight.acao" class="alerta-acao">{{ insight.acaoLabel || 'Ver' }}</router-link>
-        </div>
-        <div v-if="!insights.length" class="alerta-item neutro">
-          <span class="alerta-icon">•</span>
-          <span class="alerta-texto">Nenhum insight disponível para o período selecionado.</span>
-        </div>
-      </div>
-    </div>
-
   </div>
 </template>
 
 <script>
 import { supabase } from '../services/supabase'
+import SalesEvolutionChart from '../components/charts/SalesEvolutionChart.vue'
 
 function hoje() { return new Date().toISOString().split('T')[0] }
 
@@ -205,6 +205,8 @@ function inicioAno(d) {
 
 export default {
   name: 'DashboardView',
+
+  components: { SalesEvolutionChart },
 
   data() {
     return {
@@ -257,6 +259,39 @@ export default {
         )
       }
 
+      return resultado
+    },
+
+    faturamentoDiario() {
+      const mapaRev = {}
+      const mapaCost = {}
+      this.vendasFiltradas.forEach(v => {
+        const data = v.data_venda?.split('T')[0]
+        if (!data) return
+        mapaRev[data] = (mapaRev[data] || 0) + (Number(v.total_final) || 0)
+        const custo = (v.itens_venda_erp || []).reduce((s, item) =>
+          s + ((item.quantidade || 0) * (item.preco_custo || item.produtos_erp?.preco_custo || 0)), 0)
+        mapaCost[data] = (mapaCost[data] || 0) + custo
+      })
+
+      if (!this.dataInicio || !this.dataFim) {
+        const keys = Object.keys(mapaRev).sort()
+        return keys.map(d => ({
+          date: d,
+          revenue: mapaRev[d] || 0,
+          cost: mapaCost[d] || 0
+        }))
+      }
+
+      const inicio = new Date(this.dataInicio + 'T12:00:00')
+      const fim = new Date(this.dataFim + 'T12:00:00')
+      const resultado = []
+      const d = new Date(inicio)
+      while (d <= fim) {
+        const key = d.toISOString().split('T')[0]
+        resultado.push({ date: key, revenue: mapaRev[key] || 0, cost: mapaCost[key] || 0 })
+        d.setDate(d.getDate() + 1)
+      }
       return resultado
     },
 
@@ -314,13 +349,15 @@ export default {
         ? ((this.faturamentoPorMes[mesAtualNum]?.realizado || 0) - faturamentoMesPassado) / faturamentoMesPassado * 100
         : 0
 
-      const _diasDecorridos = this.dataInicio && this.dataFim
+      const diasDecorridos = this.dataInicio && this.dataFim
         ? Math.max(1, Math.ceil((new Date(this.dataFim) - new Date(this.dataInicio)) / 86400000) + 1)
         : 30
 
+      const vendasPorDia = diasDecorridos > 0 ? faturamento / diasDecorridos : 0
+
       return {
-        faturamento, lucro, margemLucro, quantidade, pedidos, ticketMedio,
-        crescimentoFaturamento, crescimentoMesAnterior
+        faturamento, custoTotal, lucro, margemLucro, quantidade, pedidos, ticketMedio,
+        vendasPorDia, crescimentoFaturamento, crescimentoMesAnterior
       }
     },
 
@@ -400,45 +437,7 @@ export default {
       return normais.length ? Math.max(...normais.map(p => p.receita)) : 0
     },
 
-    insights() {
-      const lista = []
-      const { faturamento, _lucro, margemLucro, _quantidade, _pedidos, crescimentoFaturamento } = this.kpis
 
-      if (this.vendasFiltradas.length === 0) return lista
-
-      if (crescimentoFaturamento > 20) {
-        lista.push({ tipo: 'positivo', texto: `Faturamento cresceu ${crescimentoFaturamento.toFixed(1)}% em relação ao período anterior.`, acao: '/vendas', acaoLabel: 'Ver vendas' })
-      } else if (crescimentoFaturamento < -20) {
-        lista.push({ tipo: 'negativo', texto: `Faturamento caiu ${Math.abs(crescimentoFaturamento).toFixed(1)}% em relação ao período anterior. Atenção!`, acao: '/vendas', acaoLabel: 'Analisar' })
-      }
-
-      if (margemLucro > 50) {
-        lista.push({ tipo: 'positivo', texto: `Margem de lucro está excelente: ${margemLucro.toFixed(1)}%.` })
-      } else if (margemLucro < 20 && faturamento > 0) {
-        lista.push({ tipo: 'negativo', texto: `Margem de lucro baixa: ${margemLucro.toFixed(1)}%. Verifique os custos.`, acao: '/produtos', acaoLabel: 'Revisar custos' })
-      }
-
-      const top = this.rankingProdutos[0]
-      if (top && top.receita > 0 && faturamento > 0) {
-        const participacao = (top.receita / faturamento) * 100
-        if (participacao > 50) {
-          lista.push({ tipo: 'info', texto: `"${top.nome}" representa ${participacao.toFixed(1)}% do faturamento.`, acao: '/vendas', acaoLabel: 'Ver vendas' })
-        }
-      }
-
-      const produtosSemVenda = this.produtos.filter(p => {
-        return !this.vendasFiltradas.some(v =>
-          (v.itens_venda_erp || []).some(i => i.produto_id === p.id)
-        )
-      })
-      if (produtosSemVenda.length > 0 && produtosSemVenda.length <= 3) {
-        lista.push({ tipo: 'negativo', texto: `Produtos sem venda no período: ${produtosSemVenda.map(p => p.nome).join(', ')}.`, acao: '/estoque', acaoLabel: 'Ver estoque' })
-      } else if (produtosSemVenda.length > 3) {
-        lista.push({ tipo: 'negativo', texto: `${produtosSemVenda.length} produtos sem venda no período. Considere promoções.`, acao: '/estoque', acaoLabel: 'Ver estoque' })
-      }
-
-      return lista
-    }
   },
 
   watch: {
@@ -541,30 +540,128 @@ export default {
     async exportarPdf() {
       try {
         const { default: jsPDF } = await import('jspdf')
-        await import('jspdf-autotable')
+        const { default: autoTable } = await import('jspdf-autotable')
         const doc = new jsPDF({ orientation: 'landscape' })
-        doc.setFontSize(16)
-        doc.text('Dashboard Gerencial — Relatório', 14, 20)
-        doc.setFontSize(10)
-        doc.setTextColor(100, 100, 100)
-        doc.text(`Período: ${this.dataInicio.split('-').reverse().join('/')} a ${this.dataFim.split('-').reverse().join('/')}`, 14, 28)
 
+        const ini = this.dataInicio ? this.dataInicio.split('-').reverse().join('/') : '-'
+        const fim = this.dataFim ? this.dataFim.split('-').reverse().join('/') : '-'
+        const k = this.kpis
+
+        // Header
+        doc.setFillColor(31, 41, 55)
+        doc.rect(0, 0, 297, 22, 'F')
+        doc.setFontSize(12)
+        doc.setTextColor(255, 255, 255)
+        doc.text('Dashboard Gerencial — Relatório', 14, 15)
+        doc.setFontSize(8)
+        doc.setTextColor(180, 190, 200)
+        doc.text(`Período: ${ini} a ${fim}`, 14, 19)
+
+        // KPI cards - row 1
+        const cardY1 = 26
+        const cardH = 18
+        const cardW = 87
+        const gap = 6
+        const startX = 14
+
+        function drawKpiCard(doc, x, y, w, h, label, value, color) {
+          doc.setFillColor(...color[0])
+          doc.setDrawColor(...color[1])
+          doc.roundedRect(x, y, w, h, 3, 3, 'FD')
+          doc.setFontSize(7)
+          doc.setTextColor(...color[2])
+          doc.text(label, x + 5, y + 6)
+          doc.setFontSize(12)
+          doc.setTextColor(31, 41, 55)
+          doc.text(value, x + 5, y + 14)
+        }
+
+        const row1 = [
+          ['Faturamento', 'R$ ' + this.formatarMoeda(k.faturamento), [[254, 240, 231], [232, 110, 26], [180, 80, 20]]],
+          ['Custo Total', 'R$ ' + this.formatarMoeda(k.custoTotal), [[239, 246, 255], [59, 130, 246], [100, 140, 200]]],
+          ['Lucro', 'R$ ' + this.formatarMoeda(k.lucro), [[240, 251, 240], [46, 125, 50], [80, 140, 80]]]
+        ]
+
+        row1.forEach((item, i) => {
+          drawKpiCard(doc, startX + i * (cardW + gap), cardY1, cardW, cardH, item[0], item[1], item[2])
+        })
+
+        // KPI cards - row 2
+        const cardY2 = cardY1 + cardH + gap
+        const row2 = [
+          ['Qtd. Vendida', String(k.quantidade) + ' un', [[245, 243, 255], [139, 92, 246], [120, 100, 200]]],
+          ['Pedidos', String(k.pedidos), [[254, 242, 242], [239, 68, 68], [180, 80, 80]]],
+          ['Ticket Médio', 'R$ ' + this.formatarMoeda(k.ticketMedio), [[240, 249, 255], [14, 165, 233], [90, 140, 180]]]
+        ]
+
+        row2.forEach((item, i) => {
+          drawKpiCard(doc, startX + i * (cardW + gap), cardY2, cardW, cardH, item[0], item[1], item[2])
+        })
+
+        // Margem + Vendas/Dia inline
+        doc.setFontSize(7)
+        doc.setTextColor(100, 100, 100)
+        doc.text(`Margem de lucro: ${k.margemLucro.toFixed(1)}%  |  Média diária: R$ ${this.formatarMoeda(k.vendasPorDia)}  |  Crescimento: ${k.crescimentoFaturamento >= 0 ? '+' : ''}${k.crescimentoFaturamento.toFixed(1)}%`, 14, cardY2 + cardH + 4)
+
+        // Chart
+        let chartY = cardY2 + cardH + 12
+        const chartRef = this.$refs.chartRef
+        if (chartRef && chartRef.getChartDataURI) {
+          try {
+            const chartImg = chartRef.getChartDataURI()
+            if (chartImg) {
+              const imgW = 269
+              const imgH = 75
+              doc.addImage(chartImg, 'PNG', 14, chartY, imgW, imgH)
+              chartY += imgH + 4
+            }
+          } catch {
+            /* chart not ready - skip image */
+          }
+        }
+
+        // Ranking Produtos table
         const colunas = ['Produto', 'Qtde', 'Receita', 'Lucro', 'Margem']
         const linhas = this.rankingProdutos.map(p => [p.nome, p.quantidade, 'R$ ' + this.formatarMoeda(p.receita), 'R$ ' + this.formatarMoeda(p.lucro), p.margem.toFixed(1) + '%'])
 
-        doc.autoTable({
+        doc.setFontSize(10)
+        doc.setTextColor(31, 41, 55)
+        doc.text('Ranking de Produtos', 14, chartY + 5)
+
+        autoTable(doc, {
           head: [colunas],
           body: linhas,
-          startY: 34,
+          startY: chartY + 8,
           theme: 'grid',
-          styles: { fontSize: 9 },
+          styles: { fontSize: 8 },
           headStyles: { fillColor: [232, 110, 26] }
         })
 
-        const finalY = doc.lastAutoTable?.finalY || 34
-        doc.setFontSize(9)
-        doc.setTextColor(80, 80, 80)
-        doc.text(`Faturamento: R$ ${this.formatarMoeda(this.kpis.faturamento)} | Lucro: R$ ${this.formatarMoeda(this.kpis.lucro)} | Pedidos: ${this.kpis.pedidos}`, 14, finalY + 10)
+        let finalY = doc.lastAutoTable?.finalY || chartY + 40
+
+        // Faturamento Diário table
+        const diarioCols = ['Data', 'Receita', 'Custo']
+        const diarioRows = this.faturamentoDiario.slice(-30).map(d => [
+          d.date.split('-').reverse().join('/'),
+          'R$ ' + this.formatarMoeda(d.revenue),
+          'R$ ' + this.formatarMoeda(d.cost || 0)
+        ])
+
+        if (diarioRows.length) {
+          finalY += 6
+          doc.setFontSize(10)
+          doc.setTextColor(31, 41, 55)
+          doc.text('Faturamento Diário', 14, finalY + 5)
+
+          autoTable(doc, {
+            head: [diarioCols],
+            body: diarioRows,
+            startY: finalY + 8,
+            theme: 'grid',
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [31, 41, 55] }
+          })
+        }
 
         doc.save('dashboard.pdf')
       } catch (e) {
@@ -576,7 +673,8 @@ export default {
     async exportarExcel() {
       try {
         const { default: XLSX } = await import('xlsx')
-        const dados = this.rankingProdutos.map(p => ({
+
+        const ranking = this.rankingProdutos.map(p => ({
           Produto: p.nome,
           Quantidade: p.quantidade,
           Receita: Number(p.receita.toFixed(2)),
@@ -584,9 +682,19 @@ export default {
           Margem: Number(p.margem.toFixed(1))
         }))
 
+        const diario = this.faturamentoDiario.map(d => ({
+          Data: d.date.split('-').reverse().join('/'),
+          Receita: Number(Number(d.revenue).toFixed(2)),
+          Custo: Number(Number(d.cost).toFixed(2))
+        }))
+
         const wb = XLSX.utils.book_new()
-        const ws = XLSX.utils.json_to_sheet(dados)
-        XLSX.utils.book_append_sheet(wb, ws, 'Ranking')
+        const wsRanking = XLSX.utils.json_to_sheet(ranking)
+        XLSX.utils.book_append_sheet(wb, wsRanking, 'Ranking')
+
+        const wsDiario = XLSX.utils.json_to_sheet(diario)
+        XLSX.utils.book_append_sheet(wb, wsDiario, 'Diario')
+
         XLSX.writeFile(wb, 'dashboard.xlsx')
       } catch (e) {
         console.error(e)
@@ -734,7 +842,7 @@ export default {
 .kpi-subgrid {
   grid-column: span 3;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
 }
 
@@ -845,66 +953,6 @@ tr.destaque td:first-child {
 .pct-col { text-align: right; }
 
 /* Alertas */
-.alertas-section {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  margin-bottom: 16px;
-}
-
-.alertas-list {
-  padding: 8px 16px 14px;
-}
-
-.alerta-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--surface-muted);
-  font-size: 13px;
-}
-
-.alerta-item:last-child {
-  border-bottom: none;
-}
-
-.alerta-icon {
-  font-size: 16px;
-  font-weight: 700;
-  flex-shrink: 0;
-  width: 20px;
-  text-align: center;
-}
-
-.alerta-item.positivo .alerta-icon { color: var(--success); }
-.alerta-item.negativo .alerta-icon { color: var(--danger); }
-.alerta-item.info .alerta-icon { color: var(--info); }
-.alerta-item.neutro .alerta-icon { color: var(--text-muted); }
-
-.alerta-texto {
-  color: var(--text);
-  flex: 1;
-}
-
-.alerta-acao {
-  font-size: var(--fs-label);
-  font-weight: 600;
-  color: var(--info);
-  text-decoration: none;
-  padding: var(--sp-01) var(--sp-03);
-  border-radius: var(--radius-sm);
-  background: var(--info-soft);
-  white-space: nowrap;
-  flex-shrink: 0;
-  transition: background var(--transition-fast);
-}
-
-.alerta-acao:hover {
-  background: var(--info);
-  color: white;
-}
-
 .field {
   display: flex;
   flex-direction: column;
@@ -929,6 +977,7 @@ tr.destaque td:first-child {
 
 @media (max-width: 768px) {
   .page { padding: 16px 12px 24px; }
+  .chart-row { grid-template-columns: 1fr; }
   .header { flex-direction: column; align-items: stretch; }
   .header h3 { font-size: 20px; }
   .header-actions { width: 100%; flex-direction: column; }

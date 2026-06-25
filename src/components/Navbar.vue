@@ -33,7 +33,7 @@
       </nav>
 
       <div class="actions">
-        <button class="cmd-btn" @click="abrirCommand" title="Comandos (⌘K)" aria-label="Abrir busca de comandos">
+        <button class="cmd-btn" title="Comandos (⌘K)" aria-label="Abrir busca de comandos" @click="abrirCommand">
           <span>⌘K</span>
         </button>
 
