@@ -655,8 +655,6 @@ export default {
 <style scoped>
 .page {
   padding: 20px 20px 32px;
-  max-width: 1520px;
-  margin: 0 auto;
 }
 
 .header {

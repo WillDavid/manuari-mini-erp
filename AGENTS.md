@@ -2,6 +2,60 @@
 
 ---
 
+## 0. INSTRUCOES PARA IA — LEIA ANTES DE QUALQUER ALTERACAO
+
+### Regras Obrigatorias
+
+| Regra | Detalhe |
+|-------|---------|
+| **Options API sempre** | `data()`, `methods: {}`, `computed: {}`, `watch: {}`. NUNCA `<script setup>` ou Composition API (exceto `SalesEvolutionChart.vue` que ja existe) |
+| **JavaScript puro** | Sem TypeScript. `props: ['foo']`, nao `defineProps<{...}>()` |
+| **Portugues** | Metodos, variaveis, comentarios em pt-BR |
+| **Nao usar composables existentes** | `src/composables/use*.js` — estao DEPRECIADOS e NAO devem ser importados. A logica esta inline no `DashboardView.vue`. Se for refatorar, migre tudo para Options API |
+| **Nao usar Pinia / store** | Estado e local em cada view. Comunicacao cross-component via `window.dispatchEvent('estoque-atualizado')` |
+| **Formato moeda** | Display: `Number(v).toFixed(2).replace('.', ',')` — virgula como decimal |
+| **Formato data** | Display: `data.split('T')[0].split('-').reverse().join('/')` — DD/MM/YYYY |
+| **preco_custo obrigatorio** | Todo INSERT em `itens_venda_erp` DEVE incluir `preco_custo` (buscar do `produtos_erp.preco_custo` no momento da venda) |
+| **Fluxo de estoque** | Toda alteracao de estoque deve: (1) atualizar `produtos_erp.estoque`, (2) inserir `estoque_movimentacoes`, (3) disparar `window.dispatchEvent(new Event('estoque-atualizado'))` |
+| **Validacao de estoque** | Antes de venda, verificar `estoque >= quantidade` para cada item. Se insuficiente, `alert('Estoque insuficiente para: ' + nome)` |
+| **Sem paginacao server-side** | Todas queries usam `select('*')` sem `.range()`. Paginacao e client-side com `slice()` |
+| **CSS scoped** | Todo `<style scoped>`. Usar variaveis CSS (`--primary`, `--border`, etc.), nao cores hardcoded |
+| **Modal pattern** | overlay `z-index:2000` + card + header + body + footer. Fechar no `@click.self` do overlay e tecla Escape |
+| **Nomes em portugues** | `modalAberto`, `carregando`, `buscarVendas()`, `salvarProduto()`, `itensPorPagina` |
+| **Recarregar apos mutacao** | Sempre chamar `buscar*()` no fim de metodos que alteram dados |
+| **Feedback com alert()** | Usar `alert()` para erros/sucesso, nao toast notifications |
+| **ApexCharts para graficos** | Usar `vue3-apexcharts`. NAO usar `echarts`/`vue-echarts` (esta no package.json mas deprecated) |
+| **jspdf-autotable** | Pode importar estatico (`import { autoTable }`) ou dinamico (`await import('jspdf-autotable')`). Ambos funcionam |
+
+### Antes de Criar Novos Arquivos
+
+- Sempre verificar se a logica ja existe (ex: `formatarMoeda` ja definido em varias views)
+- Constantes como `TIPOS_PADRAO` e `CATEGORIAS_PADRAO` estao duplicadas em `VitrineView.vue` e `ModalProdutoVitrine.vue` — NAO duplicar novamente
+- Seguir o estilo de componentes existentes como referencia
+
+### Banco de Dados — Tabelas Principais
+
+| Tabela | Funcao |
+|--------|--------|
+| `produtos_erp` | Catalogo de produtos (nome, codigo, preco_custo, preco_venda, estoque, ativo) |
+| `vendas_erp` | Vendas (cliente, data_venda, total_bruto, desconto, total_final, forma_pagamento, parcelas) |
+| `itens_venda_erp` | Itens da venda (venda_id, produto_id, quantidade, preco_unitario, **preco_custo**, subtotal) |
+| `estoque_movimentacoes` | Auditoria de estoque (produto_id, tipo [entrada/saida], quantidade, observacao) |
+| `vitrine` | Vitrine de produtos personalizados (name, tipo, categorias[], images[], acessos) |
+| `vitrine_variacoes` | Variacoes do produto vitrine (vitrine_id, nome, tipo_variacao, ordem) |
+| `vitrine_precos` | Precos por variacao (variacao_id, preco, ordem) |
+| `vitrine_precos_faixas` | Faixas de preco por quantidade (variacao_id, quantidade_minima, quantidade_label, preco, destaque) |
+| `vitrine_acessos` | Registro de acessos a vitrine (vitrine_id, data_acesso, hora_acesso, ip_hash, dispositivo, fonte) |
+| `metas_mensais` | Metas de faturamento mensal (ano, mes, valor_meta) |
+
+### Servicos
+
+- **Supabase:** importar de `'../services/supabase.js'` (cliente ja configurado)
+- **Supabase Storage:** bucket `'products'`, path `{tipo}/{timestamp}-{sanitized_filename}`
+- **Auth:** `localStorage.getItem('authExpires')` — senha `tuti@123`
+
+---
+
 ## 1. VISÃO GERAL
 
 Sistema ERP single-page para o negócio "Manuari", desenvolvido com Vue 3 (Options API), Vite 8, Supabase (PostgreSQL + Storage) e JavaScript puro. A aplicação gerencia produtos, vendas, estoque, uma vitrine de produtos personalizados com variações, preços e faixas de preço, além de dashboard com KPIs e PDV mobile-first com PWA.
@@ -22,7 +76,7 @@ Sistema ERP single-page para o negócio "Manuari", desenvolvido com Vue 3 (Optio
 | Plugin Vue | @vitejs/plugin-vue | ^6.0.7 |
 | Roteamento | vue-router (createWebHistory) | ^5.1.0 |
 | Backend/DB | Supabase (PostgreSQL) | ^2.108.2 |
-| Gráficos | ECharts + vue-echarts | ^6.1.0 / ^8.0.1 |
+| Gráficos | ApexCharts + vue3-apexcharts | ^5.15.2 / ^1.11.1 |
 | Excel | xlsx | ^0.18.5 |
 | PDF | jspdf + jspdf-autotable | ^4.2.1 / ^5.0.8 |
 | Crop Imagens | vue-advanced-cropper | ^2.8.9 |
@@ -65,7 +119,9 @@ vue-manuari-erp/
 │   └── manifest.json                   # Manifesto PWA (instalação mobile)
 ├── supabase/
 │   └── migrations/
-│       └── vitrine_acessos.sql          # Migration SQL para tabela de acessos + funções
+│       ├── vitrine_acessos.sql          # Migration SQL para tabela de acessos + funções
+│       ├── adicionar_custo_itens_venda.sql # Adiciona coluna preco_custo em itens_venda_erp
+│       └── metas_mensais.sql            # Cria tabela metas_mensais + trigger updated_at
 ├── src/
 │   ├── main.js                         # Cria app Vue, usa router, importa style.css, registra SW
 │   ├── App.vue                         # Componente raiz: Navbar + <router-view>
@@ -77,7 +133,13 @@ vue-manuari-erp/
 │   ├── services/
 │   │   └── supabase.js                 # Cliente Supabase com URL/key hardcoded
 │   ├── utils/
-│   │   └── exportacao.js              # Geração de Excel para vendas
+│   │   ├── exportacao.js              # Geração de Excel para vendas
+│   │   └── exportacao.test.js         # Testes unitarios do exportacao.js
+│   ├── composables/
+│   │   ├── useCharts.js               # (NAO USADO) Factory de opcoes de graficos ApexCharts
+│   │   ├── useDashboard.js            # (NAO USADO) Composable de dados do dashboard
+│   │   ├── useInsights.js             # (NAO USADO) Gerador de insights textuais
+│   │   └── useStatistics.js           # (NAO USADO) Calculos estatisticos
 │   ├── views/
 │   │   ├── DashboardView.vue          # Dashboard com KPIs, rankings, exportação PDF/Excel
 │   │   ├── ProdutosView.vue           # CRUD de produtos ERP
@@ -95,7 +157,9 @@ vue-manuari-erp/
 │       ├── ModalMovimentacao.vue      # Form de entrada/saída de estoque
 │       ├── ModalProdutoVitrine.vue    # Form COMPLEXO de produto vitrine (687 linhas)
 │       ├── ImageManager.vue           # Gerenciador de upload de imagens
-│       └── ImageCropper.vue           # Modal de crop de imagem (quadrado 1:1, 800px min)
+│       ├── ImageCropper.vue           # Modal de crop de imagem (quadrado 1:1, 800px min)
+│       └── charts/
+│           └── SalesEvolutionChart.vue # Grafico de area com ApexCharts (397 linhas, <script setup>)
 ```
 
 ---
@@ -185,6 +249,7 @@ this.$router.push('/identificar')
 | produto_id | FK → produtos_erp.id | Produto vendido |
 | quantidade | integer | Quantidade |
 | preco_unitario | numeric | Preço unitário na venda |
+| preco_custo | numeric | Custo unitario no momento da venda (default 0) |
 | subtotal | numeric | quantidade × preco_unitario |
 
 #### `estoque_movimentacoes`
@@ -299,7 +364,7 @@ Apenas renderiza `<Navbar />` e `<router-view />`. Inclui um listener para event
 
 ### 8.3 Navbar.vue (529 linhas)
 - **Template:** Header sticky (top 0, z-index 30, height 52px). Contém:
-  - Logo com link para `/pdv`
+  - Logo com link para `/vendas`
   - Nav links: Dashboard, Vendas, Estoque, Produtos, Vitrine, PDV (cada um com active-class)
   - Botão de comando (Cmd+K) — abre CommandPalette
   - Botão de alerta (sino) com badge numérico e dropdown de produtos com estoque ≤ 3
@@ -351,52 +416,46 @@ Apenas renderiza `<Navbar />` e `<router-view />`. Inclui um listener para event
 
 ### 8.9 ModalProdutoVitrine.vue (687 linhas) — COMPONENTE MAIS COMPLEXO
 
-#### Template (2 colunas):
+#### Template (coluna unica, refatorado):
 ```
 ┌──────────────────────────────────────────────────────────┐
 │ Modal Header: "Novo Produto" / "Editar Produto"    [✕]   │
-├────────────────────────────────┬─────────────────────────┤
-│ COLUNA ESQUERDA (2fr)         │ COLUNA DIREITA (1fr)    │
-│                                │                         │
-│ Nome: [_______________]        │ Imagens (sticky)        │
-│                                │ ┌───┐ ┌───┐ ┌───┐     │
-│ Tipo: [select▼] [novo tipo]   │ │img│ │img│ │img│     │
-│        [Adicionar]             │ └───┘ └───┘ └───┘     │
-│                                │ [Upload file input]     │
-│ Categorias:                    │                         │
-│ [nova cat] [Incluir]           │                         │
-│ ┌──────────────────────────┐   │                         │
-│ │ [chip1] [chip2] [chip3]  │   │                         │
-│ │ [chip4] [chip5] ...      │   │                         │
-│ └──────────────────────────┘   │                         │
-│                                │                         │
-│ Variações:          [Nova var] │                         │
-│ ┌──────────────────────────┐   │                         │
-│ │ Variação 1    [Remover]  │   │                         │
-│ │ Nome: [______]           │   │                         │
-│ │ Tipo: [select▼] Ordem:[#]│   │                         │
-│ │                          │   │                         │
-│ │ Preços fixos: [Novo prec]│   │                         │
-│ │ ┌────────────────────┐   │   │                         │
-│ │ │ Preço:[___] Ord:[#]│   │   │                         │
-│ │ └────────────────────┘   │   │                         │
-│ │                          │   │                         │
-│ │ Faixas preço: [Nova faixa]│  │                         │
-│ │ ┌────────────────────┐   │   │                         │
-│ │ │ Etiqueta:[___]     │   │   │                         │
-│ │ │ Qtd min:[#]        │   │   │                         │
-│ │ │ Preço:[___] Ord:[#]│   │   │                         │
-│ │ │ ☐ Destaque         │   │   │                         │
-│ │ │ [Excluir faixa]    │   │   │                         │
-│ │ └────────────────────┘   │   │                         │
-│ └──────────────────────────┘   │                         │
-├────────────────────────────────┴─────────────────────────┤
+├──────────────────────────────────────────────────────────┤
+│ Nome: [__________________________________]               │
+│                                                          │
+│ Tipo: [select▼] [novo tipo] [Adicionar]                  │
+│                                                          │
+│ Categorias:                                              │
+│ [nova cat] [Incluir]                                     │
+│ ┌──────────────────────────────────────────────────────┐ │
+│ │ [chip1] [chip2] [chip3] [chip4] [chip5] ...         │ │
+│ └──────────────────────────────────────────────────────┘ │
+│                                                          │
+│ ───────────────────────────────                          │
+│                                                          │
+│ Variações e Preços                      [+ Variação]     │
+│ ┌──────────────────────────────────────────────────────┐ │
+│ │ Variação 1                          [Remover]        │ │
+│ │ Nome: [_____]  Tipo: [select▼]  Preço: [0,00]       │ │
+│ │                                                      │ │
+│ │ [+ Faixas de preço por quantidade]                   │ │
+│ │ (expandido → tabela de faixas)                       │ │
+│ └──────────────────────────────────────────────────────┘ │
+│ ┌──────────────────────────────────────────────────────┐ │
+│ │ Variação 2 ... (mesmo formato)                       │ │
+│ └──────────────────────────────────────────────────────┘ │
+│                                                          │
+│ ───────────────────────────────                          │
+│                                                          │
+│ ▶ Imagens (N)  [toggle collapsivel]                      │
+│   └─ ImageManager (se expandido)                         │
+├──────────────────────────────────────────────────────────┤
 │ Modal Footer:                    [Cancelar]  [Salvar]     │
 └──────────────────────────────────────────────────────────┘
 ```
 
-#### Constantes:
-- **TIPOS_PADRAO:** `['canecas', 'xicaras', 'azulejos', 'acessorios', 'bottons']`
+#### Constantes (duplicadas de VitrineView.vue):
+- **TIPOS_PADRAO:** `['canecas', 'xicaras', 'azulejos', 'bottons', 'acessorios']`
 - **CATEGORIAS_PADRAO:** 22 categorias (Futebol, Capivara, Frases Engraçadas, Anime, Filmes & Series, Gatos, Animais, Norte, Estados Brasileiros, Profissoes, Arte, Frases Motivacionais, Fantasia, Sao Paulo, Doramas, Aliens & Ufologia, Desenhos, Herois, Mapa, Plantas, Musica, Envie Sua Arte)
 - **tiposVariacao:** `['cor', 'tamanho', 'modelo', 'material', 'acabamento', 'outro']`
 
@@ -407,7 +466,7 @@ Apenas renderiza `<Navbar />` e `<router-view />`. Inclui um listener para event
 - `tiposDisponiveis` (Array) — tipos existentes no banco
 - `categoriasDisponiveis` (Array) — categorias existentes no banco
 
-#### Estrutura de dados do produto (local):
+#### Estrutura de dados do produto (local simplificada):
 ```js
 {
   id: null | number,
@@ -417,15 +476,23 @@ Apenas renderiza `<Navbar />` e `<router-view />`. Inclui um listener para event
   images: [],
   variacoes: [
     {
+      _key: 'k1',
       id: null | number,
       nome: '',
       tipo_variacao: 'cor',
       ordem: 1,
-      vitrine_precos: [
-        { id: null, preco: '', ordem: 1 }
-      ],
-      vitrine_precos_faixas: [
-        { id: null, quantidade_minima: 1, quantidade_label: '', preco: '', destaque: false, ordem: 1 }
+      preco: '',           // Preco unico por variacao (string com virgula)
+      mostrarFaixas: false,
+      faixas: [
+        {
+          _key: 'kN',
+          id: null | number,
+          quantidade_minima: 1,
+          quantidade_label: '',
+          preco: '',       // string com virgula
+          destaque: false,
+          ordem: 1
+        }
       ]
     }
   ]
@@ -435,12 +502,21 @@ Apenas renderiza `<Navbar />` e `<router-view />`. Inclui um listener para event
 #### Watch:
 - `produto` (deep, immediate): Reconstrói `this.local` sempre que a prop mudar.
 
-#### Métodos principais:
-- `getProdutoInicial()`: Constrói estrutura inicial a partir da prop `produto`, normalizando todos os nested arrays.
+#### Metodos principais:
+- `buildLocal()`: Constrói estrutura local a partir da prop `produto`, normalizando nested arrays. Extrai primeiro preço das `vitrine_precos` para o campo `preco` principal da variação.
+- `formatMoneyDisplay(value)` / `parseMoney(value)`: Conversão entre número e string com vírgula.
 - `toggleCategoria(cat)`: Adiciona/remove categoria do array.
 - `adicionarTipo()`: Pega `novoTipo`, seta em `local.tipo`, limpa input.
 - `adicionarCategoria()`: Adiciona ao array se não existir.
-- `salvar()`: Normaliza todo o payload — trims, Number(), Boolean() — e emite `salvar`.
+- `adicionarVariacao()`: Adiciona variação vazia com `_key` único (contador global).
+- `adicionarFaixa(v)` / `removerFaixa(v, i)`: Manipula faixas dentro de uma variação.
+- `salvar()`: Normaliza payload — extrai `preco` da variação para `vitrine_precos` array (com 1 elemento se > 0), mapeia faixas para `vitrine_precos_faixas`, trims, Number(), Boolean() — e emite `salvar`.
+
+#### Fluxo de persistencia (via VitrineView.salvar):
+1. Modal emite `salvar(payload)`
+2. VitrineView cria/atualiza registro `vitrine`
+3. `sincronizarVariacoes()` detecta removidos, cria/atualiza variações
+4. Para cada variação: `sincronizarPrecos()` e `sincronizarFaixas()` fazem insert/update/delete
 
 ### 8.10 ImageManager.vue (195 linhas)
 - **Props:** `modelValue` (Array de URLs)
@@ -468,21 +544,65 @@ Apenas renderiza `<Navbar />` e `<router-view />`. Inclui um listener para event
   - imageRestriction: 'stencil'
 - **Save:** `getResult()` → `canvas.toBlob('image/jpeg', 0.9)` → emite `crop` com o blob.
 
+### 8.12 SalesEvolutionChart.vue (397 linhas) — COMPONENTE EXCECIONAL com `<script setup>`
+
+Unico componente que usa Composition API (`<script setup>`) em vez de Options API.
+
+**Props:** `data` (Array de {date, revenue, cost}), `loading` (Boolean), `growth` (Number)
+**Exposes:** `getChartDataURI` (usado pelo DashboardView para exportar PDF)
+
+**Template:**
+- Card com titulo "Evolucao do Faturamento"
+- Loading spinner / estado vazio (icone de grafico de barras + mensagem)
+- Summary bar: Melhor dia, Maior faturamento, Media diaria, Vs. periodo anterior (crescimento %)
+- Componente `VueApexCharts` (grafico de area com 280px de altura)
+
+**Computed:**
+- `hasCost`: Se existe custo nos dados para mostrar segunda serie
+- `peak`: Melhor dia (maior revenue) com data, valor, indice
+- `dailyAverage`: Revenue total / numero de dias
+- `visibleLabels`: Set de indices para mostrar data labels (primeiro, ultimo, peak, intervalos)
+- `chartSeries`: [{name: 'Faturamento', type:'area'}] + opcional [{name: 'Custo', type:'line'}]
+- `chartOptions`: Configuracao completa do ApexCharts com:
+  - Gradient fill para area
+  - Linha tracejada de anotacao para media diaria
+  - Marcadores apenas no ultimo ponto e no peak
+  - Sem toolbar, sem zoom
+  - Eixo X datetime com formato dd/MM
+  - Data labels nos indices visiveis
+  - Formatar eixo Y: R$ X mi / R$ X k / R$ X,XX
+  - Legend condicional (mostrada apenas quando tem custo)
+
+### 8.13 Composables (NAO USADOS) — `src/composables/`
+
+Quatro arquivos em Composition API que **nenhuma view importa atualmente**. Contem logica duplicada inline no `DashboardView.vue`.
+
+| Arquivo | Linhas | Descricao |
+|---------|--------|-----------|
+| `useCharts.js` | 326 | Factory de opcoes de graficos ApexCharts (receita, pedidos, ticket, ranking, pareto, donut, etc.) + exportarPNG/CSV |
+| `useDashboard.js` | 116 | Composable de dados do dashboard (vendas, produtos, periodo, KPIs) |
+| `useInsights.js` | 90 | Gerador de insights textuais a partir de KPIs (alertas, tendencias, concentracao) |
+| `useStatistics.js` | 206 | Calculos estatisticos avancados (KPIs, rankings, evolucao diaria, dia da semana, margem) |
+
 ---
 
 ## 9. VIEWS — DETALHAMENTO COMPLETO
 
-### 9.1 DashboardView.vue (978 linhas)
+### 9.1 DashboardView.vue (1027 linhas)
 
 #### Visão Geral
-Dashboard central com indicadores de performance (KPIs), rankings de produtos/clientes e exportação de relatórios.
+Dashboard central com indicadores de performance (KPIs), rankings de produtos/clientes e exportação de relatórios. Utiliza o componente `SalesEvolutionChart` para o gráfico de evolução do faturamento.
 
 #### KPIs calculados:
 - **Faturamento:** Soma de `total_final` de vendas do mês atual
-- **Margem de lucro:** Média da margem (preço_venda - preco_custo) / preco_venda
+- **Custo Total:** Soma de `preco_custo * quantidade` de todos os itens
+- **Lucro:** Faturamento - Custo Total
+- **Margem de lucro:** (Lucro / Faturamento) * 100
 - **Quantidade vendida:** Soma de quantidades dos itens vendidos no mês
 - **Nº de pedidos:** Total de vendas no mês
-- **Crescimento:** Comparação faturamento mês atual vs mês anterior
+- **Ticket Medio:** Faturamento / Numero de pedidos
+- **Vendas por Dia:** Faturamento / Dias decorridos
+- **Crescimento:** Comparação faturamento mês atual vs período anterior e vs mês anterior
 
 #### Rankings:
 - **Top 10 Produtos:** Por receita total gerada
@@ -557,7 +677,7 @@ supabase.from('produtos_erp').delete().eq('id', id)
 supabase.from('vendas_erp').select(`
   *,
   itens_venda_erp (
-    id, produto_id, quantidade, preco_unitario, subtotal,
+    id, produto_id, quantidade, preco_unitario, preco_custo, subtotal,
     produtos_erp (nome)
   )
 `).order('data_venda', { ascending: false })
@@ -573,7 +693,7 @@ supabase.from('produtos_erp').select('*').eq('ativo', true)
 supabase.from('vendas_erp').select(`
   id, data_venda, cliente, total_bruto, desconto, total_final, forma_pagamento,
   itens_venda_erp (
-    id, produto_id, quantidade, preco_unitario, subtotal,
+    id, produto_id, quantidade, preco_unitario, preco_custo, subtotal,
     produtos_erp (nome)
   )
 `).gte('data_venda', inicio + 'T00:00:00')
@@ -593,7 +713,7 @@ supabase.from('vendas_erp').select(`
 1. **Reversão de estoque antigo:** Busca itens antigos → para cada um, devolve ao estoque (`estoque + quantidade`) e registra `'entrada'` com obs `"Edição venda {id}"`
 2. Atualiza registro em `vendas_erp`
 3. Deleta itens antigos
-4. Insere novos itens
+4. Insere novos itens (com `preco_custo` obtido do produto no momento da edição)
 5. Baixa estoque dos novos itens (`estoque - quantidade`), registra `'saida'`
 
 #### Exclusão de venda:
@@ -1046,7 +1166,7 @@ methods: { atualizar(v) { this.$emit('update:modelValue', v) } }
 
 ## 14. BUGS E ISSUES CONHECIDOS
 
-1. **FloatingMeta consulta tabela `metas_mensais` que não existe no banco:** Nenhuma migration cria esta tabela. O recurso de metas é silenciosamente quebrado.
+1. **FloatingMeta consulta tabela `metas_mensais`:** A migration `metas_mensais.sql` cria a tabela, porem o FloatingMeta.configAberto lê do Supabase e escreve com `onConflict: 'ano,mes'`. Se o banco nao rodou a migration, o recurso falha silenciosamente.
 2. **PdvView baixa TODOS os `itens_venda_erp` sem filtro:** Na inicialização, a view carrega todo o histórico de itens vendidos para calcular popularidade. Sem paginação ou filtro de data, é extremamente ineficiente com muitos registros.
 3. **CommandPalette usa CSS variables indefinidas:** `--sp-03`, `--text-secondary`, `--layer-hover`, `--fs-body`, `--fs-label`, `--text-placeholder`, `--transition-fast` não estão definidas em `style.css` — componente renderiza incorretamente.
 4. **Sem rollback transacional em vendas:** Se a inserção de itens ou atualização de estoque falha parcialmente, não há mecanismo de rollback. O estoque pode ficar inconsistente.
@@ -1123,12 +1243,12 @@ Todas as rotas são reescritas para `/` para suportar SPA client-side routing.
 | ProdutosView | produtos_erp | insert | — |
 | ProdutosView | produtos_erp | update | eq id |
 | ProdutosView | produtos_erp | delete | eq id |
-| VendasView (lista) | vendas_erp | select * | join itens_venda_erp→produtos_erp(nome) |
+| VendasView (lista) | vendas_erp | select * | join itens_venda_erp→produtos_erp(nome, preco_custo) |
 | VendasView (export) | vendas_erp | select | join itens + produtos, gte/lte data |
 | VendasView (produtos) | produtos_erp | select * | eq ativo=true |
 | VendasView (salvar) | vendas_erp | insert | — |
-| VendasView (salvar) | itens_venda_erp | insert (batch) | — |
-| VendasView (salvar) | produtos_erp | select (single) | eq id (estoque) |
+| VendasView (salvar) | itens_venda_erp | insert (batch) | inclui preco_custo |
+| VendasView (salvar) | produtos_erp | select (single) | eq id (estoque + preco_custo) |
 | VendasView (salvar) | produtos_erp | update | eq id (estoque) |
 | VendasView (salvar) | estoque_movimentacoes | insert | — |
 | VendasView (editar) | itens_venda_erp | select | eq venda_id |
@@ -1153,11 +1273,11 @@ Todas as rotas são reescritas para `/` para suportar SPA client-side routing.
 | PdvView | produtos_erp | select * | ativo=true, order=nome |
 | PdvView | itens_venda_erp | select | sem filtro ⚠️ (popularidade) |
 | PdvView | vendas_erp | insert | — |
-| PdvView | itens_venda_erp | insert (batch) | — |
-| PdvView | produtos_erp | select (single) | eq id (estoque) |
+| PdvView | itens_venda_erp | insert (batch) | inclui preco_custo |
+| PdvView | produtos_erp | select (single) | eq id (estoque + preco_custo) |
 | PdvView | produtos_erp | update | eq id (estoque) |
 | PdvView | estoque_movimentacoes | insert | — |
-| FloatingMeta | metas_mensais | select * | ⚠️ tabela não existe |
+| FloatingMeta | metas_mensais | select * | ⚠️ tabela pode nao existir (migration nao executada) |
 
 ---
 

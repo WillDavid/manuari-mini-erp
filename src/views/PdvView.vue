@@ -1026,8 +1026,6 @@ export default {
   display: flex;
   gap: 0;
   padding: 0;
-  max-width: 1520px;
-  margin: 0 auto;
   width: 100%;
 }
 
