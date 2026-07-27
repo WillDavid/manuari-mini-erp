@@ -1,4 +1,5 @@
 <template>
+  <canvas v-if="confettiAtivo" ref="confettiCanvas" class="confetti-canvas" />
   <div
     v-if="mostrar"
     ref="floatingRef"
@@ -117,7 +118,11 @@ export default {
       posX: saved.x,
       posY: saved.y,
       offsetX: 0,
-      offsetY: 0
+      offsetY: 0,
+      confettiAtivo: false,
+      confettiParticles: [],
+      confettiAnimId: null,
+      confettiInterval: null,
     }
   },
 
@@ -146,14 +151,28 @@ export default {
     }
   },
 
+  watch: {
+    porcentagem(val, oldVal) {
+      if (val >= 100 && oldVal < 100) {
+        this.iniciarConfete()
+      } else if (val < 100) {
+        this.pararConfete()
+      }
+    },
+  },
+
   mounted() {
     this.buscarFaturamento()
     this.buscarMetas()
     this._escKey = (e) => { if (e.key === 'Escape' && this.configAberto) this.configAberto = false }
     document.addEventListener('keydown', this._escKey)
+    this.$nextTick(() => {
+      if (this.porcentagem >= 100) this.iniciarConfete()
+    })
   },
   beforeUnmount() {
     document.removeEventListener('keydown', this._escKey)
+    this.pararConfete()
   },
 
   methods: {
@@ -302,6 +321,90 @@ export default {
       this.posY = Math.max(4, Math.min(this.posY, h - rh - 4))
     },
 
+    iniciarConfete() {
+      this.confettiAtivo = true
+      this.$nextTick(() => {
+        const canvas = this.$refs.confettiCanvas
+        if (!canvas) return
+        canvas.width = window.innerWidth
+        canvas.height = window.innerHeight
+        this.dispararConfete()
+        this.confettiInterval = setInterval(() => {
+          this.dispararConfete()
+        }, 8000)
+      })
+    },
+
+    pararConfete() {
+      this.confettiAtivo = false
+      if (this.confettiInterval) {
+        clearInterval(this.confettiInterval)
+        this.confettiInterval = null
+      }
+      if (this.confettiAnimId) {
+        cancelAnimationFrame(this.confettiAnimId)
+        this.confettiAnimId = null
+      }
+      this.confettiParticles = []
+    },
+
+    dispararConfete() {
+      const canvas = this.$refs.confettiCanvas
+      if (!canvas) return
+      const ctx = canvas.getContext('2d')
+
+      const cores = ['#E86E1A', '#2E7D32', '#1D4ED8', '#B45309', '#D94F4F', '#7C3AED', '#F5A623']
+      const novas = []
+      for (let i = 0; i < 60; i++) {
+        novas.push({
+          x: Math.random() * canvas.width,
+          y: -10 - Math.random() * 100,
+          w: 6 + Math.random() * 8,
+          h: 4 + Math.random() * 6,
+          vx: (Math.random() - 0.5) * 3,
+          vy: 2 + Math.random() * 3,
+          rot: Math.random() * 360,
+          rotV: (Math.random() - 0.5) * 8,
+          cor: cores[Math.floor(Math.random() * cores.length)],
+        })
+      }
+      this.confettiParticles = [...this.confettiParticles, ...novas]
+
+      if (!this.confettiAnimId) {
+        this.animarConfete(ctx, canvas)
+      }
+    },
+
+    animarConfete(ctx, canvas) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+      for (let i = this.confettiParticles.length - 1; i >= 0; i--) {
+        const p = this.confettiParticles[i]
+        p.x += p.vx
+        p.y += p.vy
+        p.vx *= 0.99
+        p.rot += p.rotV
+        if (p.y > canvas.height + 20) {
+          this.confettiParticles.splice(i, 1)
+          continue
+        }
+
+        ctx.save()
+        ctx.translate(p.x, p.y)
+        ctx.rotate((p.rot * Math.PI) / 180)
+        ctx.fillStyle = p.cor
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h)
+        ctx.restore()
+      }
+
+      if (this.confettiParticles.length === 0) {
+        this.confettiAnimId = null
+        return
+      }
+
+      this.confettiAnimId = requestAnimationFrame(() => this.animarConfete(ctx, canvas))
+    },
+
     fechar() {
       this.visivel = false
     }
@@ -310,6 +413,13 @@ export default {
 </script>
 
 <style scoped>
+.confetti-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 99998;
+  pointer-events: none;
+}
+
 @keyframes pulse-border {
   0%, 100% { border-color: var(--primary); box-shadow: 0 8px 32px rgba(232, 110, 26, 0.2), var(--shadow-md); }
   50% { border-color: var(--primary-hover); box-shadow: 0 8px 40px rgba(232, 110, 26, 0.45), var(--shadow-md); }

@@ -29,7 +29,9 @@ export default [
         HTMLAnchorElement: 'readonly',
         Event: 'readonly',
         Image: 'readonly',
-        File: 'readonly'
+        File: 'readonly',
+        requestAnimationFrame: 'readonly',
+        cancelAnimationFrame: 'readonly'
       }
     },
     rules: {
