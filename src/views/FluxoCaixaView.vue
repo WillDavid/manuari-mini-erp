@@ -208,6 +208,7 @@
                   <th>Descrição</th>
                   <th>Parcela</th>
                   <th>Valor</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -216,6 +217,13 @@
                   <td data-label="Descrição">{{ c.descricao || '-' }}</td>
                   <td data-label="Parcela">{{ c.parcela }}/{{ c.total_parcelas }}</td>
                   <td data-label="Valor">R$ {{ formatarMoeda(c.valor) }}</td>
+                  <td class="actions-cell">
+                    <button
+                      class="btn-receber"
+                      :disabled="salvando"
+                      @click="receberConta(c)"
+                    >Receber</button>
+                  </td>
                 </tr>
               </tbody>
             </table>
