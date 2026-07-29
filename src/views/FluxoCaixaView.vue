@@ -36,33 +36,6 @@
           </div>
         </template>
 
-        <div class="field">
-          <label>Tipo</label>
-          <select v-model="filtroTipo">
-            <option value="">Todos</option>
-            <option value="entrada">Entrada</option>
-            <option value="saida">Saída</option>
-            <option value="ajuste_positivo">Ajuste positivo</option>
-            <option value="ajuste_negativo">Ajuste negativo</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <label>Categoria</label>
-          <select v-model="filtroCategoria">
-            <option value="">Todas</option>
-            <option v-for="cat in categoriasDisponiveis" :key="cat" :value="cat">{{ cat }}</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <label>Forma pagamento</label>
-          <select v-model="filtroFormaPagamento">
-            <option value="">Todas</option>
-            <option v-for="fp in FORMAS_PAGAMENTO" :key="fp" :value="fp">{{ fp }}</option>
-          </select>
-        </div>
-
         <div class="field busca-field">
           <label>Buscar</label>
           <input v-model="busca" placeholder="Descrição..." />
@@ -94,9 +67,46 @@
         <div class="resumo-label">Saídas</div>
         <div class="resumo-valor">R$ {{ formatarMoeda(totalSaidas) }}</div>
       </div>
-      <div class="resumo-card">
-        <div class="resumo-label">Lançamentos</div>
-        <div class="resumo-valor">{{ totalLancamentos }}</div>
+      <div class="resumo-card" :class="resultadoPeriodo >= 0 ? 'entrada' : 'saida'">
+        <div class="resumo-label">Resultado</div>
+        <div class="resumo-valor">{{ resultadoPeriodo >= 0 ? '+' : '' }} R$ {{ formatarMoeda(resultadoPeriodo) }}</div>
+      </div>
+    </div>
+
+    <!-- EVOLUÇÃO DO SALDO -->
+    <div v-if="evolucaoSaldo.length" class="evolucao-section">
+      <div class="evolucao-header">
+        <h5>Evolução do Saldo</h5>
+        <div class="evolucao-toggle">
+          <button :class="{ active: agrupamento === 'semana' }" @click="agrupamento = 'semana'">Semanal</button>
+          <button :class="{ active: agrupamento === 'mes' }" @click="agrupamento = 'mes'">Mensal</button>
+        </div>
+      </div>
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Período</th>
+              <th>Entradas</th>
+              <th>Saídas</th>
+              <th>Saldo no período</th>
+              <th>Saldo acumulado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(e, idx) in evolucaoSaldo" :key="idx" :class="{ negativo: e.saldoPeriodo < 0 }">
+              <td data-label="Período">{{ e.periodo }}</td>
+              <td data-label="Entradas" class="valor-positivo">+ R$ {{ formatarMoeda(e.entradas) }}</td>
+              <td data-label="Saídas" class="valor-negativo">- R$ {{ formatarMoeda(e.saidas) }}</td>
+              <td data-label="Saldo no período" :class="e.saldoPeriodo >= 0 ? 'valor-positivo' : 'valor-negativo'">
+                {{ e.saldoPeriodo >= 0 ? '+' : '' }} R$ {{ formatarMoeda(e.saldoPeriodo) }}
+              </td>
+              <td data-label="Saldo acumulado" :class="e.acumulado >= 0 ? 'valor-positivo' : 'valor-negativo'">
+                R$ {{ formatarMoeda(e.acumulado) }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -162,12 +172,6 @@
         <button :disabled="paginaAtual === 1" @click="irParaPagina(paginaAtual - 1)">Anterior</button>
         <button :disabled="paginaAtual === totalPaginas" @click="irParaPagina(paginaAtual + 1)">Próxima</button>
       </div>
-    </div>
-
-    <!-- GRÁFICO -->
-    <div v-if="dadosGrafico.length" class="chart-card">
-      <div class="chart-title">Entradas e Saídas por Dia</div>
-      <VueApexCharts type="bar" height="220" :options="opcoesGrafico" :series="seriesGrafico" />
     </div>
 
     <!-- CONTAS A RECEBER -->
@@ -419,6 +423,7 @@ export default {
       contasReceber: [],
       paginaReceberAtual: 1,
       itensPorPaginaReceber: 10,
+      agrupamento: 'semana',
     }
   },
 
@@ -549,6 +554,83 @@ export default {
     categoriasDisponiveis() {
       const cats = this.lancamentos.map(l => l.categoria).filter(Boolean)
       return [...new Set([...CATEGORIAS_ENTRADA, ...CATEGORIAS_SAIDA, ...cats])].sort()
+    },
+
+    resultadoPeriodo() {
+      return this.totalEntradas - this.totalSaidas
+    },
+
+    evolucaoSaldo() {
+      if (!this.dataInicio || !this.dataFim) return []
+
+      const lancamentos = [...this.lancamentosFiltradosPeriodo]
+        .sort((a, b) => a.data.localeCompare(b.data))
+
+      const resultado = []
+      const inicio = new Date(this.dataInicio + 'T12:00:00')
+      const fim = new Date(this.dataFim + 'T12:00:00')
+      const inicial = Number(this.saldoInicial.valor_inicial) || 0
+      let acumulado = this.lancamentos
+        .filter(l => l.data < this.dataInicio)
+        .reduce((acc, l) => {
+          if (l.tipo === 'entrada' || l.tipo === 'ajuste_positivo') return acc + Number(l.valor)
+          return acc - Number(l.valor)
+        }, inicial)
+
+      if (this.agrupamento === 'mes') {
+        let mesAtual = new Date(inicio.getFullYear(), inicio.getMonth(), 1)
+        while (mesAtual <= fim) {
+          const mesStr = mesAtual.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
+          const inicioMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1)
+          const fimMes = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0)
+          const inicioStr = inicioMes.toISOString().split('T')[0]
+          const fimStr = fimMes.toISOString().split('T')[0]
+
+          const doMes = lancamentos.filter(l => l.data >= inicioStr && l.data <= fimStr)
+          const entradas = doMes.filter(l => l.tipo === 'entrada' || l.tipo === 'ajuste_positivo')
+            .reduce((s, l) => s + Number(l.valor), 0)
+          const saidas = doMes.filter(l => l.tipo === 'saida' || l.tipo === 'ajuste_negativo')
+            .reduce((s, l) => s + Number(l.valor), 0)
+          const saldoPeriodo = entradas - saidas
+          acumulado += saldoPeriodo
+
+          resultado.push({ periodo: mesStr, entradas, saidas, saldoPeriodo, acumulado })
+          mesAtual.setMonth(mesAtual.getMonth() + 1)
+        }
+      } else {
+        let diaAtual = new Date(inicio)
+        let semanaEntradas = 0
+        let semanaSaidas = 0
+        let semanaInicio = diaAtual
+
+        while (diaAtual <= fim) {
+          const diaStr = diaAtual.toISOString().split('T')[0]
+          const doDia = lancamentos.filter(l => l.data === diaStr)
+          semanaEntradas += doDia.filter(l => l.tipo === 'entrada' || l.tipo === 'ajuste_positivo')
+            .reduce((s, l) => s + Number(l.valor), 0)
+          semanaSaidas += doDia.filter(l => l.tipo === 'saida' || l.tipo === 'ajuste_negativo')
+            .reduce((s, l) => s + Number(l.valor), 0)
+
+          const ehUltimo = diaAtual.getTime() === fim.getTime()
+          const ehDomingo = diaAtual.getDay() === 0
+          const passou7dias = (diaAtual.getTime() - semanaInicio.getTime()) >= 6 * 86400000
+
+          if (ehUltimo || ehDomingo || passou7dias) {
+            const saldoPeriodo = semanaEntradas - semanaSaidas
+            acumulado += saldoPeriodo
+            const label = semanaInicio.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+              + ' a ' + diaAtual.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+            resultado.push({ periodo: label, entradas: semanaEntradas, saidas: semanaSaidas, saldoPeriodo, acumulado })
+            semanaEntradas = 0
+            semanaSaidas = 0
+            semanaInicio = new Date(diaAtual.getTime() + 86400000)
+          }
+
+          diaAtual.setDate(diaAtual.getDate() + 1)
+        }
+      }
+
+      return resultado
     },
 
     dadosGrafico() {
@@ -1161,11 +1243,66 @@ export default {
 
 /* Chart */
 .chart-card {
+  display: none;
+}
+
+.evolucao-section {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 16px 12px 4px;
   margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.evolucao-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.evolucao-header h5 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.evolucao-toggle {
+  display: flex;
+  gap: 4px;
+  background: var(--surface-muted);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+
+.evolucao-toggle button {
+  padding: 4px 12px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.evolucao-toggle button.active {
+  background: var(--surface);
+  color: var(--primary);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+}
+
+.evolucao-section .table-card {
+  border: none;
+  border-radius: 0;
+  margin-bottom: 0;
+}
+
+.evolucao-section tr.negativo td {
+  background: rgba(217, 79, 79, 0.03);
 }
 
 .chart-title {
