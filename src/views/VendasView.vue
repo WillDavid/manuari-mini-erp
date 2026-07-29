@@ -77,7 +77,7 @@
             </td>
 
             <td data-label="Parcelas">
-              {{ v.parcelas && v.parcelas > 1 ? v.parcelas + 'x' : '—' }}
+              {{ v.forma_pagamento === 'Credito' ? (v.parcelas || 1) + 'x' : '—' }}
             </td>
 
             <td class="actions-cell">
