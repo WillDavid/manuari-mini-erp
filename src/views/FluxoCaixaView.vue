@@ -180,17 +180,9 @@
       <div v-if="contasReceber.length">
         <div class="receber-resumo">
           <div class="receber-card pendente">
-            <div class="receber-label">Pendente</div>
+            <div class="receber-label">Pendentes</div>
             <div class="receber-valor">R$ {{ formatarMoeda(totalPendente) }}</div>
             <div class="receber-extra">{{ contasPendentes.length }} parcela(s)</div>
-          </div>
-          <div class="receber-card recebido">
-            <div class="receber-label">Recebido no período</div>
-            <div class="receber-valor">R$ {{ formatarMoeda(totalRecebidoNoMes) }}</div>
-          </div>
-          <div class="receber-card">
-            <div class="receber-label">Total a receber</div>
-            <div class="receber-valor">R$ {{ formatarMoeda(totalReceberGeral) }}</div>
           </div>
         </div>
 
@@ -1504,17 +1496,14 @@ button.delete:hover { background: var(--danger-soft); }
 .receber-sub { font-size: 11px; color: var(--text-muted); font-weight: 500; }
 
 .receber-resumo {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 0;
+  display: flex;
   border-bottom: 1px solid var(--border);
 }
 
 .receber-card {
+  flex: 1;
   padding: 14px 16px;
-  border-right: 1px solid var(--border);
 }
-.receber-card:last-child { border-right: none; }
 .receber-card.pendente { border-top: 3px solid var(--danger); }
 .receber-card.recebido { border-top: 3px solid var(--success); }
 
@@ -1588,8 +1577,7 @@ button.delete:hover { background: var(--danger-soft); }
 tr.vencida { background: rgba(217, 79, 79, 0.04) !important; }
 
 @media (max-width: 768px) {
-  .receber-resumo { grid-template-columns: 1fr; }
-  .receber-card { border-right: none; border-bottom: 1px solid var(--border); }
+  .receber-card { border-bottom: 1px solid var(--border); }
   .receber-card:last-child { border-bottom: none; }
 }
 </style>
