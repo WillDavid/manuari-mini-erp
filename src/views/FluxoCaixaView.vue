@@ -171,69 +171,103 @@
     </div>
 
     <!-- CONTAS A RECEBER -->
-    <div v-if="contasReceber.length" class="receber-section">
+    <div class="receber-section">
       <div class="receber-header">
         <h4>Contas a Receber</h4>
         <span class="receber-sub">Vendas no cartão de crédito</span>
       </div>
 
-      <div class="receber-resumo">
-        <div class="receber-card pendente">
-          <div class="receber-label">Pendente</div>
-          <div class="receber-valor">R$ {{ formatarMoeda(totalPendente) }}</div>
-          <div class="receber-extra">{{ contasPendentes.length }} parcela(s)</div>
+      <div v-if="contasReceber.length">
+        <div class="receber-resumo">
+          <div class="receber-card pendente">
+            <div class="receber-label">Pendente</div>
+            <div class="receber-valor">R$ {{ formatarMoeda(totalPendente) }}</div>
+            <div class="receber-extra">{{ contasPendentes.length }} parcela(s)</div>
+          </div>
+          <div class="receber-card recebido">
+            <div class="receber-label">Recebido no período</div>
+            <div class="receber-valor">R$ {{ formatarMoeda(totalRecebidoNoMes) }}</div>
+          </div>
+          <div class="receber-card">
+            <div class="receber-label">Total a receber</div>
+            <div class="receber-valor">R$ {{ formatarMoeda(totalReceberGeral) }}</div>
+          </div>
         </div>
-        <div class="receber-card recebido">
-          <div class="receber-label">Recebido no período</div>
-          <div class="receber-valor">R$ {{ formatarMoeda(totalRecebidoNoMes) }}</div>
+
+        <!-- PREVISÃO DE RECEBIMENTOS -->
+        <div v-if="contasPrevisao.length" class="previsao-section">
+          <div class="previsao-header">
+            <h5>A receber a partir de hoje</h5>
+            <span class="previsao-total">R$ {{ formatarMoeda(totalPrevisao) }} em {{ contasPrevisao.length }} parcela(s)</span>
+          </div>
+          <div class="table-card">
+            <table>
+              <thead>
+                <tr>
+                  <th>Vencimento</th>
+                  <th>Descrição</th>
+                  <th>Parcela</th>
+                  <th>Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="c in contasPrevisao" :key="c.id">
+                  <td data-label="Vencimento">{{ formatarData(c.data_vencimento) }}</td>
+                  <td data-label="Descrição">{{ c.descricao || '-' }}</td>
+                  <td data-label="Parcela">{{ c.parcela }}/{{ c.total_parcelas }}</td>
+                  <td data-label="Valor">R$ {{ formatarMoeda(c.valor) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-        <div class="receber-card">
-          <div class="receber-label">Total a receber</div>
-          <div class="receber-valor">R$ {{ formatarMoeda(totalReceberGeral) }}</div>
+
+        <div class="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th>Vencimento</th>
+                <th>Descrição</th>
+                <th>Parcela</th>
+                <th>Valor</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="c in contasPaginadas" :key="c.id" :class="{ vencida: c.data_vencimento < hoje && c.status === 'pendente' }">
+                <td data-label="Vencimento">{{ formatarData(c.data_vencimento) }}</td>
+                <td data-label="Descrição">{{ c.descricao || '-' }}</td>
+                <td data-label="Parcela">{{ c.parcela }}/{{ c.total_parcelas }}</td>
+                <td data-label="Valor">R$ {{ formatarMoeda(c.valor) }}</td>
+                <td data-label="Status">
+                  <span :class="'tipo-badge ' + (c.status === 'recebido' ? 'entrada' : 'ajuste_negativo')">
+                    {{ c.status === 'recebido' ? 'Recebido' : 'Pendente' }}
+                  </span>
+                </td>
+                <td class="actions-cell">
+                  <button
+                    v-if="c.status === 'pendente'"
+                    class="btn-receber"
+                    :disabled="salvando"
+                    @click="receberConta(c)"
+                  >Receber</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div v-if="contasReceber.length > itensPorPaginaReceber" class="pagination">
+          <div class="pagination-actions">
+            <button :disabled="paginaReceberAtual === 1" @click="paginaReceberAtual--">Anterior</button>
+            <button :disabled="paginaReceberAtual * itensPorPaginaReceber >= contasReceber.length" @click="paginaReceberAtual++">Próxima</button>
+          </div>
         </div>
       </div>
 
-      <div class="table-card">
-        <table>
-          <thead>
-            <tr>
-              <th>Vencimento</th>
-              <th>Descrição</th>
-              <th>Parcela</th>
-              <th>Valor</th>
-              <th>Status</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="c in contasPaginadas" :key="c.id" :class="{ vencida: c.data_vencimento < hoje && c.status === 'pendente' }">
-              <td data-label="Vencimento">{{ formatarData(c.data_vencimento) }}</td>
-              <td data-label="Descrição">{{ c.descricao || '-' }}</td>
-              <td data-label="Parcela">{{ c.parcela }}/{{ c.total_parcelas }}</td>
-              <td data-label="Valor">R$ {{ formatarMoeda(c.valor) }}</td>
-              <td data-label="Status">
-                <span :class="'tipo-badge ' + (c.status === 'recebido' ? 'entrada' : 'ajuste_negativo')">
-                  {{ c.status === 'recebido' ? 'Recebido' : 'Pendente' }}
-                </span>
-              </td>
-              <td class="actions-cell">
-                <button
-                  v-if="c.status === 'pendente'"
-                  class="btn-receber"
-                  :disabled="salvando"
-                  @click="receberConta(c)"
-                >Receber</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div v-if="contasReceber.length > itensPorPaginaReceber" class="pagination">
-        <div class="pagination-actions">
-          <button :disabled="paginaReceberAtual === 1" @click="paginaReceberAtual--">Anterior</button>
-          <button :disabled="paginaReceberAtual * itensPorPaginaReceber >= contasReceber.length" @click="paginaReceberAtual++">Próxima</button>
-        </div>
+      <div v-else class="receber-empty">
+        Nenhuma conta a receber. Execute o backfill para importar vendas antigas.
       </div>
     </div>
 
@@ -493,6 +527,16 @@ export default {
 
     contasPendentes() {
       return this.contasReceber.filter(c => c.status === 'pendente')
+    },
+
+    contasPrevisao() {
+      return this.contasPendentes
+        .filter(c => c.data_vencimento >= this.hoje)
+        .sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento))
+    },
+
+    totalPrevisao() {
+      return this.contasPrevisao.reduce((s, c) => s + Number(c.valor), 0)
     },
 
     totalPendente() {
@@ -1514,6 +1558,43 @@ button.delete:hover { background: var(--danger-soft); }
 
 .receber-extra {
   font-size: 11px; color: var(--text-muted); margin-top: 4px;
+}
+
+.receber-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.previsao-section {
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.previsao-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0 16px 8px;
+  gap: 12px;
+}
+
+.previsao-header h5 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.previsao-total {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.previsao-section .table-card {
+  margin-bottom: 0;
 }
 
 .btn-receber {
