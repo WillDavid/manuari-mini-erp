@@ -64,54 +64,8 @@
     <!-- Espacador -->
     <div class="sidebar-spacer" />
 
-    <!-- Bottom: Notificacoes + Sair -->
+    <!-- Bottom: Sair -->
     <div class="sidebar-bottom">
-      <!-- Alertas -->
-      <div class="bottom-item-wrapper">
-        <button
-          class="bottom-item alert-item"
-          :class="{ 'has-alerts': itensBaixoEstoque.length }"
-          :title="colapsado ? 'Notificacoes' : ''"
-          @click="alternarAlertas"
-        >
-          <span class="nav-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-            </svg>
-          </span>
-          <span v-show="!colapsado" class="nav-label">Notificacoes</span>
-          <span v-if="colapsado" class="nav-tooltip">Notificacoes</span>
-          <span v-if="itensBaixoEstoque.length" class="alert-badge">{{ itensBaixoEstoque.length }}</span>
-        </button>
-
-        <!-- Dropdown -->
-        <Transition name="fade">
-          <div v-if="alertasAbertos" class="alert-dropdown" :class="{ 'dropdown-collapsed': colapsado }">
-            <div class="alert-header">
-              <span class="alert-title">Estoque baixo</span>
-              <span class="alert-sub">{{ itensBaixoEstoque.length }} produto(s) com 3 ou menos pecas</span>
-            </div>
-            <div class="alert-list">
-              <div v-for="p in itensBaixoEstoque" :key="p.id" class="alert-row">
-                <div class="alert-row-info">
-                  <span class="alert-row-name">{{ p.nome }}</span>
-                  <span class="alert-row-code">{{ p.codigo || '-' }}</span>
-                </div>
-                <span class="alert-row-qty">{{ p.estoque }}</span>
-              </div>
-              <div v-if="!itensBaixoEstoque.length" class="alert-empty">
-                Nenhum alerta no momento
-              </div>
-            </div>
-            <router-link to="/estoque" class="alert-link" @click="fecharMenus">
-              Ver estoque
-            </router-link>
-          </div>
-        </Transition>
-      </div>
-
-      <!-- Sair -->
       <button
         class="bottom-item logout-item"
         :title="colapsado ? 'Sair' : ''"
@@ -133,7 +87,6 @@
 
 <script>
 import logo from '../assets/manuari-logotipo-300dpi.png'
-import { supabase } from '../services/supabase'
 import pkg from '../../package.json'
 
 const STORAGE_KEY = 'sidebar_collapsed'
@@ -147,8 +100,6 @@ export default {
       versao: pkg.version,
       colapsado: this.lerEstadoSalvo(),
       menuAberto: false,
-      alertasAbertos: false,
-      itensBaixoEstoque: [],
       itensNavegacao: [
         {
           nome: 'PDV',
@@ -192,7 +143,6 @@ export default {
   watch: {
     '$route.fullPath'() {
       this.fecharMenus()
-      this.buscarAlertasEstoque()
     },
     colapsado() {
       this.salvarEstado()
@@ -202,14 +152,11 @@ export default {
 
   mounted() {
     this.aplicarLargura()
-    this.buscarAlertasEstoque()
-    window.addEventListener('estoque-atualizado', this.buscarAlertasEstoque)
     document.addEventListener('keydown', this.onKeydown)
     document.addEventListener('click', this.fecharDropdownExterno)
   },
 
   beforeUnmount() {
-    window.removeEventListener('estoque-atualizado', this.buscarAlertasEstoque)
     document.removeEventListener('keydown', this.onKeydown)
     document.removeEventListener('click', this.fecharDropdownExterno)
   },
@@ -245,28 +192,6 @@ export default {
 
     fecharMenus() {
       this.menuAberto = false
-      this.alertasAbertos = false
-    },
-
-    alternarAlertas() {
-      this.alertasAbertos = !this.alertasAbertos
-    },
-
-    async buscarAlertasEstoque() {
-      const { data, error } = await supabase
-        .from('produtos_erp')
-        .select('id, nome, codigo, estoque, ativo')
-        .eq('ativo', true)
-        .order('estoque', { ascending: true })
-
-      if (error) {
-        console.error(error)
-        return
-      }
-
-      this.itensBaixoEstoque = (data || []).filter(
-        (p) => Number(p.estoque || 0) <= 3,
-      )
     },
 
     logout() {
@@ -277,7 +202,6 @@ export default {
     fecharDropdownExterno(event) {
       const sidebar = this.$el
       if (!sidebar.contains(event.target)) {
-        this.alertasAbertos = false
         this.menuAberto = false
       }
     },
@@ -575,141 +499,6 @@ export default {
   color: var(--danger);
 }
 
-/* Badge de alerta */
-.alert-badge {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: var(--danger);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-feature-settings: 'tnum' 1;
-}
-
-.alert-item.has-alerts {
-  color: var(--warning);
-}
-
-/* Dropdown de alertas */
-.alert-dropdown {
-  position: absolute;
-  left: calc(100% + 8px);
-  bottom: 0;
-  width: 320px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  z-index: 60;
-}
-
-.alert-dropdown.dropdown-collapsed {
-  left: 72px;
-  bottom: -8px;
-}
-
-.alert-header {
-  padding: 12px 14px 10px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.alert-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.alert-sub {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.alert-list {
-  display: flex;
-  flex-direction: column;
-  max-height: 240px;
-  overflow-y: auto;
-  padding: 6px 0;
-}
-
-.alert-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 14px;
-  gap: 12px;
-  transition: background 0.1s;
-}
-
-.alert-row:hover {
-  background: var(--surface-soft);
-}
-
-.alert-row-info {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.alert-row-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.alert-row-code {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.alert-row-qty {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--danger);
-  font-feature-settings: 'tnum' 1;
-  flex-shrink: 0;
-}
-
-.alert-empty {
-  padding: 24px;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 13px;
-}
-
-.alert-link {
-  display: block;
-  text-align: center;
-  padding: 10px;
-  text-decoration: none;
-  background: var(--primary);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  border-top: 1px solid var(--border);
-  border-radius: 0 0 var(--radius-md) var(--radius-md);
-  transition: background 0.15s;
-}
-
-.alert-link:hover {
-  background: var(--primary-hover);
-}
-
 /* ===== TRANSITIONS ===== */
 .fade-enter-active,
 .fade-leave-active {
@@ -744,20 +533,6 @@ export default {
 
   .sidebar.collapsed {
     width: 240px;
-  }
-
-  .alert-dropdown {
-    left: 8px;
-    right: 8px;
-    bottom: auto;
-    top: calc(100% + 4px);
-    width: auto;
-    max-width: 340px;
-  }
-
-  .alert-dropdown.dropdown-collapsed {
-    left: 8px;
-    bottom: auto;
   }
 }
 </style>
