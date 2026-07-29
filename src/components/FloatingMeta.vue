@@ -574,7 +574,7 @@ export default {
 }
 
 .meta-bar-fill.superado {
-  background: var(--success);
+  background: #2563EB;
 }
 
 .meta-aviso {
