@@ -601,7 +601,7 @@ export default {
         let diaAtual = new Date(inicio)
         let semanaEntradas = 0
         let semanaSaidas = 0
-        let semanaInicio = diaAtual
+        let semanaInicio = new Date(inicio)
 
         while (diaAtual <= fim) {
           const diaStr = diaAtual.toISOString().split('T')[0]
