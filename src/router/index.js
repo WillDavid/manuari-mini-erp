@@ -34,6 +34,11 @@ const routes = [
     component: () => import('../views/DashboardView.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/fluxo-caixa',
+    component: () => import('../views/FluxoCaixaView.vue'),
+    meta: { requiresAuth: true },
+  },
 ]
 
 const router = createRouter({

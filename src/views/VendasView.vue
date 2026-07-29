@@ -38,6 +38,7 @@
             <th>Total Final</th>
             <th>Custo Total</th>
             <th>Pagamento</th>
+            <th>Parcelas</th>
             <th></th>
           </tr>
         </thead>
@@ -73,6 +74,10 @@
 
             <td data-label="Pagamento">
               {{ v.forma_pagamento || '-' }}
+            </td>
+
+            <td data-label="Parcelas">
+              {{ v.parcelas && v.parcelas > 1 ? v.parcelas + 'x' : '—' }}
             </td>
 
             <td class="actions-cell">
@@ -120,6 +125,7 @@
     <!-- MODAL -->
     <ModalVenda
       v-if="modalAberto"
+      ref="modalVenda"
       :produtos="produtos"
       :editando="!!vendaEditando"
       :venda-inicial="vendaEditando"
@@ -198,7 +204,10 @@ export default {
         const dataB = new Date(b.data_venda || 0).getTime()
 
         if (dataA !== dataB) return dataB - dataA
-        return (b.id || 0) - (a.id || 0)
+        // desempate por horario de criacao
+        const timeA = new Date(a.created_at || 0).getTime()
+        const timeB = new Date(b.created_at || 0).getTime()
+        return timeB - timeA
       })
       .filter(v => {
 
@@ -331,6 +340,7 @@ export default {
           )
         `)
         .order('data_venda', { ascending: false })
+        .order('created_at', { ascending: false })
 
       if (error) {
         console.error(error)
@@ -416,6 +426,8 @@ export default {
 
     if (errosEstoque.length > 0) {
       alert(`Estoque insuficiente:\n${errosEstoque.join('\n')}\n\nAjuste as quantidades e tente novamente.`)
+      if (this.$refs.modalVenda) this.$refs.modalVenda.isLoading = false
+      this.isLoading = false
       return
     }
 
@@ -427,7 +439,8 @@ export default {
       total_bruto: venda.total_bruto,
       desconto: venda.desconto,
       total_final: venda.total_final,
-      forma_pagamento: venda.forma_pagamento
+      forma_pagamento: venda.forma_pagamento,
+      parcelas: Number(venda.parcelas) || 1
     }
 
     let vendaSalva
@@ -542,6 +555,69 @@ export default {
         .eq('id', item.produto_id)
     }
 
+    // =========================
+    // 💰 FLUXO DE CAIXA
+    // =========================
+    try {
+      if (this.vendaEditando) {
+        await supabase.from('fluxo_caixa_contas_receber').delete().eq('venda_id', vendaSalva.id)
+        await supabase.from('fluxo_caixa_lancamentos').delete().eq('venda_id', vendaSalva.id)
+      }
+
+      const parcelas = Number(venda.parcelas) || 1
+      const valorParcela = Number((Number(venda.total_final) / parcelas).toFixed(2))
+      const dataVenda = venda.data_venda || new Date().toISOString().split('T')[0]
+      const hojeStr = new Date().toISOString().split('T')[0]
+      const isCreditoParcelado = venda.forma_pagamento === 'Credito' && parcelas > 1
+
+      for (let i = 1; i <= parcelas; i++) {
+        const dataVencimento = new Date(dataVenda + 'T12:00:00')
+        dataVencimento.setDate(dataVencimento.getDate() + (30 * i))
+        const dataVencimentoStr = dataVencimento.toISOString().split('T')[0]
+
+        let valorFinalParcela = valorParcela
+        if (i === parcelas) {
+          valorFinalParcela = Number((Number(venda.total_final) - (valorParcela * (parcelas - 1))).toFixed(2))
+        }
+
+        if (isCreditoParcelado) {
+          const { error: errConta } = await supabase.from('fluxo_caixa_contas_receber').insert([{
+            venda_id: vendaSalva.id,
+            descricao: `${venda.cliente || 'Cliente'} — Parcela ${i}/${parcelas}`,
+            valor: valorFinalParcela,
+            parcela: i,
+            total_parcelas: parcelas,
+            data_vencimento: dataVencimentoStr,
+            status: 'pendente',
+            forma_pagamento: venda.forma_pagamento
+          }])
+          if (errConta) throw errConta
+        } else {
+          const { error: errLanc } = await supabase.from('fluxo_caixa_lancamentos').insert([{
+            tipo: 'entrada',
+            valor: valorFinalParcela,
+            data: dataVenda,
+            categoria: 'Vendas',
+            descricao: `Venda — ${venda.cliente || 'Cliente'}`,
+            forma_pagamento: venda.forma_pagamento || null,
+            venda_id: vendaSalva.id
+          }])
+          if (errLanc) throw errLanc
+        }
+      }
+
+      const { data: verificar } = await supabase
+        .from('fluxo_caixa_lancamentos')
+        .select('id, valor, data, categoria')
+        .eq('venda_id', vendaSalva.id)
+      console.log('[Vendas] fluxo_caixa registrado:', verificar)
+
+      window.dispatchEvent(new Event('fluxo-caixa-atualizado'))
+    } catch (erroFluxo) {
+      console.error('[Vendas] Erro ao registrar no fluxo de caixa:', erroFluxo)
+      alert('Venda salva, mas houve erro ao registrar no fluxo de caixa. Veja o console.')
+    }
+
     this.fecharModal()
     this.buscarVendas()
 
@@ -600,19 +676,23 @@ export default {
       if (erroMov) throw erroMov
     }
 
-    // 3. Deletar itens
+    // 3. Deletar fluxo de caixa vinculado
+    await supabase.from('fluxo_caixa_contas_receber').delete().eq('venda_id', id)
+    await supabase.from('fluxo_caixa_lancamentos').delete().eq('venda_id', id)
+
+    // 4. Deletar itens
     await supabase
       .from('itens_venda_erp')
       .delete()
       .eq('venda_id', id)
 
-    // 4. Deletar venda
+    // 5. Deletar venda
     await supabase
       .from('vendas_erp')
       .delete()
       .eq('id', id)
 
-    // 5. Atualizar tela
+    // 6. Atualizar tela
     this.buscarVendas()
 
   } catch (error) {

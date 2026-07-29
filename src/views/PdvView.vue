@@ -648,7 +648,55 @@ export default {
             }])
         }
 
-        window.dispatchEvent(new Event('estoque-atualizado'))
+        // 💰 FLUXO DE CAIXA
+        try {
+          const parcelas = Number(this.preview?.parcelas) || 1
+          const totalFinal = Number(this.preview?.total_final) || 0
+          const valorParcela = Number((totalFinal / parcelas).toFixed(2))
+          const dataVenda = new Date().toISOString().split('T')[0]
+          const hojeStr = dataVenda
+          const isCreditoParcelado = (this.preview?.forma_pagamento || '') === 'Credito' && parcelas > 1
+
+          for (let i = 1; i <= parcelas; i++) {
+            const dataVencimento = new Date(dataVenda + 'T12:00:00')
+            dataVencimento.setDate(dataVencimento.getDate() + (30 * i))
+            const dataVencimentoStr = dataVencimento.toISOString().split('T')[0]
+
+            let valorFinalParcela = valorParcela
+            if (i === parcelas) {
+              valorFinalParcela = Number((totalFinal - (valorParcela * (parcelas - 1))).toFixed(2))
+            }
+
+            if (isCreditoParcelado) {
+              const { error: errConta } = await supabase.from('fluxo_caixa_contas_receber').insert([{
+                venda_id: vendaSalva.id,
+                descricao: `${this.preview?.cliente || 'Cliente'} — Parcela ${i}/${parcelas}`,
+                valor: valorFinalParcela,
+                parcela: i,
+                total_parcelas: parcelas,
+                data_vencimento: dataVencimentoStr,
+                status: 'pendente',
+                forma_pagamento: this.preview?.forma_pagamento || 'Credito'
+              }])
+              if (errConta) throw errConta
+            } else {
+              const { error: errLanc } = await supabase.from('fluxo_caixa_lancamentos').insert([{
+                tipo: 'entrada',
+                valor: valorFinalParcela,
+                data: dataVenda,
+                categoria: 'Vendas',
+                descricao: `PDV — ${this.preview?.cliente || 'Cliente'}`,
+                forma_pagamento: this.preview?.forma_pagamento || null,
+                venda_id: vendaSalva.id
+              }])
+              if (errLanc) throw errLanc
+            }
+          }
+          console.log('[PDV] fluxo_caixa registrado para venda', vendaSalva.id)
+          window.dispatchEvent(new Event('fluxo-caixa-atualizado'))
+        } catch (erroFluxo) {
+          console.error('[PDV] Erro ao registrar no fluxo de caixa:', erroFluxo)
+        }
 
         this.vendaConfirmada = true
 

@@ -83,6 +83,13 @@
               </tr>
             </tbody>
           </table>
+
+          <div class="confetti-toggle">
+            <label class="toggle-label">
+              <input v-model="confettiHabilitado" type="checkbox" />
+              <span>Efeito de confete ao bater a meta</span>
+            </label>
+          </div>
         </div>
         <div class="modal-footer">
           <button class="export-btn-cancel" @click="configAberto = false">Cancelar</button>
@@ -123,6 +130,7 @@ export default {
       confettiParticles: [],
       confettiAnimId: null,
       confettiInterval: null,
+      confettiHabilitado: localStorage.getItem('confetti_habilitado') === 'true',
     }
   },
 
@@ -158,6 +166,11 @@ export default {
       } else if (val < 100) {
         this.pararConfete()
       }
+    },
+    confettiHabilitado(val) {
+      localStorage.setItem('confetti_habilitado', String(val))
+      if (!val) this.pararConfete()
+      else if (this.porcentagem >= 100) this.iniciarConfete()
     },
   },
 
@@ -322,6 +335,7 @@ export default {
     },
 
     iniciarConfete() {
+      if (!this.confettiHabilitado) return
       this.confettiAtivo = true
       this.$nextTick(() => {
         const canvas = this.$refs.confettiCanvas
@@ -659,4 +673,28 @@ export default {
 .meta-table td:first-child { font-weight: 600; color: var(--text); }
 .meta-table tr.atual td:first-child { color: var(--primary); }
 .meta-table input { height: 32px; width: 100%; min-width: 80px; }
+
+.confetti-toggle {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.toggle-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  min-height: auto;
+  flex-shrink: 0;
+  cursor: pointer;
+}
 </style>

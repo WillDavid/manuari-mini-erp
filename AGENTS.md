@@ -47,6 +47,9 @@
 | `vitrine_precos_faixas` | Faixas de preco por quantidade (variacao_id, quantidade_minima, quantidade_label, preco, destaque) |
 | `vitrine_acessos` | Registro de acessos a vitrine (vitrine_id, data_acesso, hora_acesso, ip_hash, dispositivo, fonte) |
 | `metas_mensais` | Metas de faturamento mensal (ano, mes, valor_meta) |
+| `fluxo_caixa_saldo_inicial` | Saldo inicial do fluxo de caixa (valor_inicial, data_referencia) |
+| `fluxo_caixa_lancamentos` | Lancamentos do fluxo de caixa (tipo, valor, data, categoria, forma_pagamento) |
+| `fluxo_caixa_contas_receber` | Contas a receber de vendas parceladas (venda_id, valor, parcela, data_vencimento, status) |
 
 ### Servicos
 
@@ -58,7 +61,7 @@
 
 ## 1. VISÃO GERAL
 
-Sistema ERP single-page para o negócio "Manuari", desenvolvido com Vue 3 (Options API), Vite 8, Supabase (PostgreSQL + Storage) e JavaScript puro. A aplicação gerencia produtos, vendas, estoque, uma vitrine de produtos personalizados com variações, preços e faixas de preço, além de dashboard com KPIs e PDV mobile-first com PWA.
+Sistema ERP single-page para o negócio "Manuari", desenvolvido com Vue 3 (Options API), Vite 8, Supabase (PostgreSQL + Storage) e JavaScript puro. A aplicação gerencia produtos, vendas, estoque, fluxo de caixa (lancamentos + contas a receber), uma vitrine de produtos personalizados com variações, preços e faixas de preço, além de dashboard com KPIs e PDV mobile-first com PWA. A interface utiliza sidebar colapsavel para navegação.
 
 **Repositório GitHub:** `https://github.com/WillDavid/manuari-mini-erp`
 **URL Supabase:** `https://byriesholblgyysnmnpu.supabase.co`
@@ -121,15 +124,16 @@ vue-manuari-erp/
 │   └── migrations/
 │       ├── vitrine_acessos.sql          # Migration SQL para tabela de acessos + funções
 │       ├── adicionar_custo_itens_venda.sql # Adiciona coluna preco_custo em itens_venda_erp
-│       └── metas_mensais.sql            # Cria tabela metas_mensais + trigger updated_at
+│       ├── metas_mensais.sql            # Cria tabela metas_mensais + trigger updated_at
+│       └── fluxo_caixa.sql              # Cria tabelas fluxo_caixa_saldo_inicial, fluxo_caixa_lancamentos, fluxo_caixa_contas_receber
 ├── src/
 │   ├── main.js                         # Cria app Vue, usa router, importa style.css, registra SW
-│   ├── App.vue                         # Componente raiz: Navbar + <router-view>
+│   ├── App.vue                         # Componente raiz: Sidebar + FloatingMeta + CommandPalette + <router-view>
 │   ├── style.css                       # Reset CSS + design tokens + estilos globais
 │   ├── assets/
 │   │   └── manuari-logotipo-300dpi.png # Logo da marca
 │   ├── router/
-│   │   └── index.js                    # 8 rotas + guard de autenticação
+│   │   └── index.js                    # 9 rotas + guard de autenticação
 │   ├── services/
 │   │   └── supabase.js                 # Cliente Supabase com URL/key hardcoded
 │   ├── utils/
@@ -146,10 +150,12 @@ vue-manuari-erp/
 │   │   ├── VendasView.vue             # Gestão de vendas + exportação Excel
 │   │   ├── EstoqueView.vue            # Controle de estoque (entrada/saída)
 │   │   ├── VitrineView.vue            # Vitrine de produtos personalizados
-│   │   └── PdvView.vue                # PDV mobile-first com PWA
+│   │   ├── PdvView.vue                # PDV mobile-first com PWA
+│   │   └── FluxoCaixaView.vue         # Fluxo de caixa (lancamentos, contas a receber, saldo)
 │   └── components/
 │       ├── UserIdentifier.vue          # Tela de login (senha fixa)
-│       ├── Navbar.vue                  # Header com navegação + alerta de estoque baixo
+│       ├── Sidebar.vue                 # Sidebar colapsavel com navegacao + alertas + logout
+│       ├── Navbar.vue                  # (DEPRECIADO) Antigo header horizontal — nao usado, substituido pelo Sidebar
 │       ├── CommandPalette.vue          # Paleta de comando (Cmd+K) com busca e atalhos
 │       ├── FloatingMeta.vue            # Widget flutuante de metas mensais
 │       ├── ModalProduto.vue            # Form de criar/editar produto ERP
@@ -183,7 +189,7 @@ router.beforeEach((to, from, next) => {
 })
 ```
 
-### Logout (`Navbar.vue`)
+### Logout (`Sidebar.vue`)
 ```js
 localStorage.removeItem('authExpires')
 this.$router.push('/identificar')
@@ -210,6 +216,7 @@ this.$router.push('/identificar')
 | `/estoque` | EstoqueView | Sim | Controle de estoque (entrada/saída) |
 | `/vitrine` | VitrineView | Sim | Vitrine de produtos personalizados |
 | `/pdv` | PdvView | Sim | PDV mobile-first com PWA |
+| `/fluxo-caixa` | FluxoCaixaView | Sim | Fluxo de caixa (lancamentos, contas a receber) |
 
 ---
 
@@ -313,6 +320,47 @@ this.$router.push('/identificar')
 | fonte | text | Origem do tráfego |
 | created_at | timestamptz | Registro |
 
+#### `fluxo_caixa_saldo_inicial` (via migration)
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | serial PK | Identificador |
+| valor_inicial | numeric(12,2) | Saldo inicial (default 0) |
+| data_referencia | date | Data de referência (default CURRENT_DATE) |
+| observacao | text | Observação opcional |
+| created_at | timestamptz | Data de criação |
+| updated_at | timestamptz | Data de atualização |
+
+#### `fluxo_caixa_lancamentos` (via migration)
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | serial PK | Identificador |
+| tipo | text (CHECK) | 'entrada', 'saida', 'ajuste_positivo', 'ajuste_negativo' |
+| valor | numeric(12,2) | Valor do lançamento (> 0) |
+| data | date | Data do lançamento |
+| categoria | text | Categoria do lançamento |
+| descricao | text | Descrição |
+| forma_pagamento | text | Forma de pagamento |
+| observacao | text | Observação opcional |
+| venda_id | integer | FK opcional para vendas_erp |
+| created_at | timestamptz | Data de criação |
+| updated_at | timestamptz | Data de atualização |
+
+#### `fluxo_caixa_contas_receber` (via migration)
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | serial PK | Identificador |
+| venda_id | integer | FK para vendas_erp |
+| descricao | text | Descrição da conta |
+| valor | numeric(12,2) | Valor da parcela |
+| parcela | integer | Número da parcela (default 1) |
+| total_parcelas | integer | Total de parcelas (default 1) |
+| data_vencimento | date | Data de vencimento |
+| data_recebimento | date | Data de recebimento (nullable) |
+| status | text (CHECK) | 'pendente' ou 'recebido' (default 'pendente') |
+| forma_pagamento | text | Forma de pagamento |
+| created_at | timestamptz | Data de criação |
+| updated_at | timestamptz | Data de atualização |
+
 ### 6.2 Storage Bucket
 - **Nome:** `products`
 - **Path pattern:** `{tipo}/{timestamp}-{sanitized_filename}`
@@ -332,8 +380,8 @@ this.$router.push('/identificar')
 ## 6.4 Versionamento
 
 A versão do sistema é definida em `package.json` no campo `version` (atualmente `"0.0.0"`).
-- A versão é exibida no canto superior esquerdo do Navbar, ao lado do logo, no formato `v0.0.0`.
-- O valor é importado dinamicamente do `package.json` via `Navbar.vue`.
+- A versão é exibida no topo da Sidebar, ao lado do logo, no formato `v0.0.0`.
+- O valor é importado dinamicamente do `package.json` via `Sidebar.vue`.
 
 ---
 
@@ -345,7 +393,7 @@ A versão do sistema é definida em `package.json` no campo `version` (atualment
 2. **Props down / Events up:** Comunicação pai-filho via `$emit()`.
 3. **`window.dispatchEvent`:** Comunicação cross-component.
    - Evento `'estoque-atualizado'`: Disparado por ProdutosView, EstoqueView, VendasView, PdvView, DashboardView
-   - Navbar escuta e recarrega alertas de estoque baixo
+   - Sidebar escuta e recarrega alertas de estoque baixo
    - Evento `'abrir-paleta'`: Disparado pelo Navbar para abrir CommandPalette
 4. **`localStorage`:** Apenas `authExpires` (timestamp de expiração de login).
 
@@ -353,50 +401,75 @@ A versão do sistema é definida em `package.json` no campo `version` (atualment
 
 ## 8. COMPONENTES — DETALHAMENTO COMPLETO
 
-### 8.1 App.vue (20 linhas)
-Apenas renderiza `<Navbar />` e `<router-view />`. Inclui um listener para evento `'abrir-paleta'` que controla a CommandPalette globalmente.
+### 8.1 App.vue (51 linhas)
+- **Template:** `<Sidebar />` + `<main class="app-content"><router-view /></main>` + `<FloatingMeta />` + `<CommandPalette v-if="$route.path !== '/identificar'" />`
+- **Layout:** Sidebar fixa à esquerda com `--sidebar-width` CSS variable (240px ou 64px colapsado). Main content ocupa o espaço restante com `margin-left` dinâmico.
+- **Mobile (≤768px):** Sidebar vira overlay (menu hamburger), content ocupa 100% com margem superior de 48px para a mobile bar.
+- **Responsabilidades:** Apenas renderiza os componentes de layout. CommandPalette é omitido na tela de login.
 
-### 8.2 UserIdentifier.vue (165 linhas)
+### 8.2 Sidebar.vue (763 linhas) — COMPONENTE PRINCIPAL DE NAVEGAÇÃO
+
+- **Template:** Mobile top bar (hamburger, logo, versão) + Sidebar fixa com overlay para mobile. Estrutura:
+  - **Topo:** Logo + nome Manuari + versão + botão toggle colapsar (chevron)
+  - **Navegação:** 7 itens — PDV, Dashboard, Vendas, Estoque, Produtos, Vitrine, Caixa (cada um com SVG inline e active-class)
+  - **Espaçador flex:** Empurra bottom items para o rodapé
+  - **Bottom:** Botão de notificações (sino) com badge numérico + dropdown de alertas + botão Sair
+
+- **Funcionalidades:**
+  - **Colapsar:** Toggle 240px ↔ 64px. Estado salvo em `localStorage('sidebar_collapsed')`. Ao colapsar, mostra tooltips nos itens com hover.
+  - **Dropdown de alertas:** Exibe produtos com estoque ≤ 3. Botão "Ver estoque" linka para `/estoque`.
+  - **Mobile (≤768px):** Sidebar fica oculta (transform translateX -100%), abre com botão hamburger na mobile-bar. Overlay escuro para fechar.
+  - **Hover expand:** No modo colapsado, hover expande temporariamente (não implementado visualmente ainda — placeholder `_hoverExpand`)
+
+- **Lógica:**
+  - `buscarAlertasEstoque()`: Query Supabase `produtos_erp` where `ativo = true`, ordenado por estoque ascending. Filtra client-side `estoque <= 3`.
+  - Escuta evento `'estoque-atualizado'` no window.
+  - `fecharDropdownExterno`: Fecha alertas e menu mobile ao clicar fora (document click listener).
+  - `watch '$route.fullPath'`: Fecha menus e recarrega alertas ao mudar rota.
+  - `onKeydown`: Escape fecha menus.
+  - `logout()`: Remove `authExpires` do localStorage, redireciona para `/identificar`.
+
+- **Sidebar store (localStorage):**
+  - Chave `'sidebar_collapsed'`: `'true'` ou `'false'`
+  - Lido em `data()` via `lerEstadoSalvo()`, salvo em watch `colapsado`
+
+- **CSS:** Sidebar fixed, height 100vh, z-index 55, transition width 0.25s. Border-right + shadow no mobile open. Tooltip posicionado à direita com opacity 0→1 no hover. Mobile bar fixed top 0, height 48px.
+
+### 8.3 UserIdentifier.vue (165 linhas)
 - **Template:** Overlay full-screen com card centralizado. Logo + título "Bem-vindo" + input password + botão "Entrar".
 - **Lógica:** Compara senha digitada com `SENHA_CORRETA`. Delay artificial de 300ms. Salva `authExpires` no localStorage.
 - **mounted():** Se já autenticado, redireciona para `/pdv`.
 - **CSS:** Overlay fixo z-index 9999, card max-width 380px, gradiente laranja no botão.
 
-### 8.3 Navbar.vue (529 linhas)
-- **Template:** Header sticky (top 0, z-index 30, height 52px). Contém:
-  - Logo com link para `/vendas`
-  - Nav links: Dashboard, Vendas, Estoque, Produtos, Vitrine, PDV (cada um com active-class)
-  - Botão de comando (Cmd+K) — abre CommandPalette
-  - Botão de alerta (sino) com badge numérico e dropdown de produtos com estoque ≤ 3
-  - Botão hamburger (mobile) — toggle `menuAberto`
-  - Botão logout
-- **Lógica:**
-  - `buscarAlertasEstoque()`: Query Supabase → filtra produtos ativos com estoque ≤ 3
-  - Escuta evento `'estoque-atualizado'` no window
-  - `fecharDropdownExterno`: Fecha menus ao clicar fora (document click listener)
-  - `watch: '$route.fullPath'`: Fecha menus e recarrega alertas ao mudar rota
-- **CSS:** Responsivo — em mobile o nav vira dropdown absoluto (200px), links viram blocos verticais, alert dropdown desloca `right: -16px`
+### 8.4 Navbar.vue (529 linhas) — DEPRECIADO
 
-### 8.4 CommandPalette.vue (319 linhas)
+**Não é mais importado por App.vue.** O arquivo existe apenas como referência histórica. Foi substituído pelo `Sidebar.vue`. Tinha:
+- Header sticky (top 0, z-index 30, height 52px)
+- Nav links: Dashboard, Vendas, Estoque, Produtos, Vitrine, PDV
+- Botão de comando (Cmd+K), alerta de estoque (sino), logout
+- CSS responsivo com dropdown mobile
+
+### 8.5 CommandPalette.vue (319 linhas)
+
 - **Template:** Overlay escuro com input de busca centralizado. Lista de comandos filtrados com ícones e descrições. Navegação por setas (↑↓) e Enter.
 - **Atalho:** Cmd+K (macOS) / Ctrl+K (Windows) abre a paleta. Esc fecha.
 - **Comandos:** Navegação entre todas as rotas, ações rápidas (Nova Venda, Novo Produto, etc.).
 - **CSS:** Usa variáveis CSS personalizadas (`--sp-03`, `--text-secondary`, etc.) — atualmente não definidas globalmente, resultando em fallback para valores padrão.
 
-### 8.5 FloatingMeta.vue (552 linhas)
+### 8.6 FloatingMeta.vue (552 linhas)
 - **Template:** Widget flutuante e arrastável (drag) que exibe metas mensais de faturamento.
 - **Lógica:** Busca dados da tabela `metas_mensais` no Supabase (tabela NÃO existe no banco — feature quebrada).
 - Exibe progresso com barra colorida, valor atual vs meta.
 - **CSS:** Posicionamento fixo, drag via eventos de mouse/touch.
 
-### 8.6 ModalProduto.vue (164 linhas)
+### 8.7 ModalProduto.vue (164 linhas)
 - **Props:** `produto` (Object), `editando` (Boolean)
 - **Emits:** `fechar`, `salvar`
 - **Campos:** Nome, Código, Preço Custo, Preço Venda (formato moeda com vírgula), Estoque (number), Ativo (checkbox)
 - **Lógica:** `parseMoney()` converte vírgula → ponto antes de emitir `salvar`. Validação: `preco_venda > 0`.
 - **CSS:** Modal padrão (overlay + card 420px), grid 2 colunas para preços, responsivo (1 coluna mobile).
 
-### 8.7 ModalVenda.vue (251 linhas)
+### 8.8 ModalVenda.vue (251 linhas)
 - **Props:** `produtos` (Array), `editando` (Boolean), `vendaInicial` (Object)
 - **Emits:** `fechar`, `salvar`
 - **Campos:** Cliente (text), Data (date, default hoje), Select de produto, Lista de itens (nome, qtd, preço unit, subtotal, remover), Total, Desconto %, Total Final, Forma Pagamento (Pix/Dinheiro/Credito), Parcelas (1-12x, visível só em Credito)
@@ -407,14 +480,14 @@ Apenas renderiza `<Navbar />` e `<router-view />`. Inclui um listener para event
 - **Submit:** Emite `salvar` com o objeto venda. O pai (VendasView/PdvView) faz toda a lógica de persistência.
 - **CSS:** Grid 2 colunas para cliente/data, linha de item com 5 colunas (1fr 64px 80px 80px 32px), summary card com fundo soft.
 
-### 8.8 ModalMovimentacao.vue (140 linhas)
+### 8.9 ModalMovimentacao.vue (140 linhas)
 - **Props:** `produto` (Object), `tipo` ('entrada' | 'saida')
 - **Emits:** `fechar`, `salvar`
 - **Campos:** Nome do produto (display), Quantidade (number, default 1), Observação (text)
 - **Validação:** Quantidade deve ser > 0
 - **CSS:** Modal 380px, sem complexidade.
 
-### 8.9 ModalProdutoVitrine.vue (687 linhas) — COMPONENTE MAIS COMPLEXO
+### 8.10 ModalProdutoVitrine.vue (687 linhas) — COMPONENTE MAIS COMPLEXO
 
 #### Template (coluna unica, refatorado):
 ```
@@ -518,7 +591,7 @@ Apenas renderiza `<Navbar />` e `<router-view />`. Inclui um listener para event
 3. `sincronizarVariacoes()` detecta removidos, cria/atualiza variações
 4. Para cada variação: `sincronizarPrecos()` e `sincronizarFaixas()` fazem insert/update/delete
 
-### 8.10 ImageManager.vue (195 linhas)
+### 8.11 ImageManager.vue (195 linhas)
 - **Props:** `modelValue` (Array de URLs)
 - **Emits:** `update:modelValue`
 - **Template:** Grid de cards de imagem (100×100px) cada um com botões ✕ ↑ ↓. Input file. Modal de crop.
@@ -533,7 +606,7 @@ Apenas renderiza `<Navbar />` e `<router-view />`. Inclui um listener para event
   8. Pega URL pública e adiciona ao array
 - **Reorder:** `subir(i)` / `descer(i)` trocam posições no array.
 
-### 8.11 ImageCropper.vue (149 linhas)
+### 8.12 ImageCropper.vue (149 linhas)
 - **Props:** `src` (String — data URL da imagem)
 - **Emits:** `cancel`, `crop`
 - **Template:** Overlay dark (rgba 0.85) + modal 900px max. Header com título "Cortar Imagem" + ✕. Corpo com Cropper. Footer com Cancelar + Salvar Corte.
@@ -544,7 +617,7 @@ Apenas renderiza `<Navbar />` e `<router-view />`. Inclui um listener para event
   - imageRestriction: 'stencil'
 - **Save:** `getResult()` → `canvas.toBlob('image/jpeg', 0.9)` → emite `crop` com o blob.
 
-### 8.12 SalesEvolutionChart.vue (397 linhas) — COMPONENTE EXCECIONAL com `<script setup>`
+### 8.13 SalesEvolutionChart.vue (397 linhas) — COMPONENTE EXCECIONAL com `<script setup>`
 
 Unico componente que usa Composition API (`<script setup>`) em vez de Options API.
 
@@ -573,7 +646,7 @@ Unico componente que usa Composition API (`<script setup>`) em vez de Options AP
   - Formatar eixo Y: R$ X mi / R$ X k / R$ X,XX
   - Legend condicional (mostrada apenas quando tem custo)
 
-### 8.13 Composables (NAO USADOS) — `src/composables/`
+### 8.14 Composables (NAO USADOS) — `src/composables/`
 
 Quatro arquivos em Composition API que **nenhuma view importa atualmente**. Contem logica duplicada inline no `DashboardView.vue`.
 
@@ -894,6 +967,75 @@ supabase.from('itens_venda_erp').select('produto_id, quantidade') // ⚠️ sem 
 - Cache de assets para funcionamento offline
 - Estratégia: network-first com fallback para cache
 
+### 9.7 FluxoCaixaView.vue (1453 linhas)
+
+#### Visão Geral
+View de fluxo de caixa com lançamentos (entradas/saídas/ajustes), contas a receber (de vendas parceladas), saldo inicial configurável e gráfico de barras diário.
+
+#### Layout
+- **Header:** Título "Fluxo de Caixa" + botões "Definir valor inicial" e "Novo lançamento"
+- **Filtros:** Período (hoje/7d/mês atual/mês anterior/personalizado), tipo, categoria, forma pagamento, busca textual
+- **Resumo:** 4 cards — Saldo atual, Entradas, Saídas, Nº de lançamentos
+- **Contas a Receber:** Seção com cards (Pendente, Recebido no período, Total a receber), tabela paginada de parcelas com botão "Receber"
+- **Gráfico:** Barras agrupadas (entradas verdes, saídas vermelhas) via ApexCharts
+- **Tabela:** Lançamentos com data, tipo, categoria, descrição, forma pagamento, valor. Ações: Editar, Excluir
+
+#### Dados
+- `lancamentos`: Array de `fluxo_caixa_lancamentos`
+- `saldoInicial`: Objeto `fluxo_caixa_saldo_inicial` (busca o último registro)
+- `contasReceber`: Array de `fluxo_caixa_contas_receber`
+
+#### Computed principais
+- `saldoAtual`: `saldoInicial + entradas - saídas`
+- `lancamentosFiltrados`: Filtra por data, tipo, categoria, forma pagamento, busca
+- `contasPendentes` / `totalPendente` / `totalRecebidoNoMes` / `totalReceberGeral`
+- `dadosGrafico`: Agrega entradas/saídas por dia no período
+
+#### Fluxo de recebimento de conta
+1. Clica "Receber" em uma conta pendente
+2. `confirm()` valida
+3. Atualiza `fluxo_caixa_contas_receber` (status='recebido', data_recebimento=hoje)
+4. Insere lançamento tipo 'entrada' em `fluxo_caixa_lancamentos`
+5. Recarrega contas e lançamentos
+
+#### Queries Supabase
+```js
+// Buscar lançamentos
+supabase.from('fluxo_caixa_lancamentos').select('*').order('data', { ascending: false })
+
+// Buscar contas a receber
+supabase.from('fluxo_caixa_contas_receber').select('*').order('data_vencimento', { ascending: true })
+
+// Buscar saldo inicial (último)
+supabase.from('fluxo_caixa_saldo_inicial').select('*').order('id', { ascending: false }).limit(1)
+
+// Criar/Atualizar saldo inicial
+supabase.from('fluxo_caixa_saldo_inicial').insert([payload])
+supabase.from('fluxo_caixa_saldo_inicial').update(payload).eq('id', id)
+
+// CRUD lançamentos
+supabase.from('fluxo_caixa_lancamentos').insert([payload])
+supabase.from('fluxo_caixa_lancamentos').update(payload).eq('id', id)
+supabase.from('fluxo_caixa_lancamentos').delete().eq('id', id)
+
+// Receber conta (update + insert lançamento)
+supabase.from('fluxo_caixa_contas_receber').update({ status: 'recebido', data_recebimento: hoje }).eq('id', conta.id)
+supabase.from('fluxo_caixa_lancamentos').insert([{ tipo: 'entrada', valor, data, categoria: 'Vendas', ... }])
+```
+
+#### Constantes
+- `FORMAS_PAGAMENTO`: Dinheiro, Pix, Cartão de débito, Cartão de crédito, Transferência, Outro
+- `CATEGORIAS_ENTRADA`: Vendas, Recebimentos, Aportes, Reembolsos, Outros
+- `CATEGORIAS_SAIDA`: Matéria-prima, Embalagens, Frete e transporte, Marketing, Manutenção, Contas, Impostos e taxas, Outros
+
+#### Tipos de lançamento
+- `entrada` / `saida`: Movimentações normais
+- `ajuste_positivo` / `ajuste_negativo`: Ajustes manuais (exigem descrição obrigatória)
+
+#### Pagination: 20/50/100 itens
+
+#### Watchers: busca, filtroTipo, filtroCategoria, filtroFormaPagamento, itensPorPagina, periodo, dataInicio, dataFim → reset página. lancamentos → ajusta página.
+
 ---
 
 ## 10. PADRÕES DE CÓDIGO
@@ -975,7 +1117,7 @@ this.dados = data || []
 // Emitir (em qualquer view que modifica estoque)
 window.dispatchEvent(new Event('estoque-atualizado'))
 
-// Escutar (Navbar.vue)
+// Escutar (Sidebar.vue)
 mounted() { window.addEventListener('estoque-atualizado', this.buscarAlertasEstoque) }
 beforeUnmount() { window.removeEventListener('estoque-atualizado', this.buscarAlertasEstoque) }
 ```
@@ -1180,6 +1322,9 @@ methods: { atualizar(v) { this.$emit('update:modelValue', v) } }
 12. **`formatarMoeda`/`formatarPreco`/`formatarData` duplicados:** Quase toda view e componente define seus próprios métodos de formatação.
 13. **Falta `parcelas` no payload em alguns fluxos:** O campo `parcelas` da venda pode não ser enviado em insert/update.
 14. **Import inconsistente do jspdf-autotable:** Estático (`import { autoTable }`) no PdvView vs dinâmico (`await import('jspdf-autotable')`) no DashboardView.
+15. **Navbar.vue órfão:** Arquivo ainda existe em `src/components/Navbar.vue` mas não é importado por App.vue (substituído por Sidebar.vue). Código morto.
+16. **FluxoCaixaView não dispara evento de atualização de dados:** Não há evento cross-component para notificar quando lançamentos são criados/editados/excluídos. Se outras views precisarem reagir a mudanças no fluxo de caixa, não há mecanismo.
+17. **FluxoCaixaView não tem integração automática com VendasView:** Contas a receber de vendas parceladas precisam ser criadas manualmente ou via migration — não há trigger automático na criação de venda.
 
 ---
 
@@ -1194,7 +1339,7 @@ methods: { atualizar(v) { this.$emit('update:modelValue', v) } }
 | Métodos | camelCase (português) | `buscarVendas()`, `salvarProduto()`, `fecharModal()` |
 | Variáveis | camelCase (português) | `modalAberto`, `vendaEditando`, `itensPorPagina` |
 | Eventos (emit) | kebab-case | `'estoque-atualizado'` |
-| Tabelas BD | snake_case com `_erp` | `produtos_erp`, `vendas_erp`, `itens_venda_erp` |
+| Tabelas BD | snake_case com `_erp` ou prefixo `fluxo_caixa_` | `produtos_erp`, `vendas_erp`, `fluxo_caixa_lancamentos` |
 | Colunas BD | snake_case | `preco_venda`, `forma_pagamento`, `created_at` |
 | CSS classes | kebab-case | `modal-overlay`, `table-card`, `btn-primary` |
 
@@ -1236,7 +1381,7 @@ Todas as rotas são reescritas para `/` para suportar SPA client-side routing.
 
 | View/Componente | Tabela | Operação | Join/Filtro |
 |-----------------|--------|----------|-------------|
-| Navbar | produtos_erp | select | ativo=true, order=estoque asc |
+| Sidebar | produtos_erp | select | ativo=true, order=estoque asc |
 | DashboardView | vendas_erp | select * | join itens + produtos, gte/lte data, mês atual |
 | DashboardView | produtos_erp | select * | ativo=true |
 | ProdutosView | produtos_erp | select * | order=created_at desc |
@@ -1278,6 +1423,12 @@ Todas as rotas são reescritas para `/` para suportar SPA client-side routing.
 | PdvView | produtos_erp | update | eq id (estoque) |
 | PdvView | estoque_movimentacoes | insert | — |
 | FloatingMeta | metas_mensais | select * | ⚠️ tabela pode nao existir (migration nao executada) |
+| FluxoCaixaView | fluxo_caixa_lancamentos | select * | order=data desc, order=id desc |
+| FluxoCaixaView | fluxo_caixa_contas_receber | select * | order=data_vencimento asc |
+| FluxoCaixaView | fluxo_caixa_saldo_inicial | select * | order=id desc, limit 1 |
+| FluxoCaixaView | fluxo_caixa_saldo_inicial | insert/update | — |
+| FluxoCaixaView | fluxo_caixa_lancamentos | insert/update/delete | — |
+| FluxoCaixaView | fluxo_caixa_contas_receber | update | eq id (status + data_recebimento) |
 
 ---
 
@@ -1285,7 +1436,7 @@ Todas as rotas são reescritas para `/` para suportar SPA client-side routing.
 
 | Evento | Disparado por | Escutado por | Propósito |
 |--------|--------------|-------------|-----------|
-| `estoque-atualizado` (window) | ProdutosView, EstoqueView, VendasView, PdvView, DashboardView | Navbar | Atualizar alertas de estoque baixo |
+| `estoque-atualizado` (window) | ProdutosView, EstoqueView, VendasView, PdvView, DashboardView | Sidebar | Atualizar alertas de estoque baixo |
 | `abrir-paleta` (window) | Navbar (Cmd+K) | App.vue | Abrir CommandPalette |
 | `fechar` (emit) | Todos os modais | Views pai | Fechar modal |
 | `salvar` (emit) | Todos os modais | Views pai | Persistir dados |
