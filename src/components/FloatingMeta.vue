@@ -36,7 +36,7 @@
 
       <div class="meta-linha">
         <span class="meta-label">Meta R$ {{ formatarMoeda(metaAtual) }}</span>
-        <span class="meta-pct-inline">{{ porcentagem.toFixed(1) }}%</span>
+        <span class="meta-pct-inline">{{ porcentagem >= 100 ? '100% (+R$ ' + formatarMoeda(faturamento - metaAtual) + ')' : porcentagem.toFixed(1) + '%' }}</span>
       </div>
       <div class="meta-bar-wrap">
         <div class="meta-bar-fill" :style="{ width: porcentagem + '%' }" :class="{ superado: porcentagem >= 100 }"></div>
