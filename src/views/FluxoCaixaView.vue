@@ -230,40 +230,8 @@
           </div>
         </div>
 
-        <div class="table-card">
-          <table>
-            <thead>
-              <tr>
-                <th>Vencimento</th>
-                <th>Descrição</th>
-                <th>Parcela</th>
-                <th>Valor</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="c in contasPaginadas" :key="c.id" :class="{ vencida: c.data_vencimento < hoje && c.status === 'pendente' }">
-                <td data-label="Vencimento">{{ formatarData(c.data_vencimento) }}</td>
-                <td data-label="Descrição">{{ c.descricao || '-' }}</td>
-                <td data-label="Parcela">{{ c.parcela }}/{{ c.total_parcelas }}</td>
-                <td data-label="Valor">R$ {{ formatarMoeda(c.valor) }}</td>
-                <td data-label="Status">
-                  <span :class="'tipo-badge ' + (c.status === 'recebido' ? 'entrada' : 'ajuste_negativo')">
-                    {{ c.status === 'recebido' ? 'Recebido' : 'Pendente' }}
-                  </span>
-                </td>
-                <td class="actions-cell">
-                  <button
-                    v-if="c.status === 'pendente'"
-                    class="btn-receber"
-                    :disabled="salvando"
-                    @click="receberConta(c)"
-                  >Receber</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div v-else-if="contasPendentes.length" class="receber-empty">
+          Nenhuma parcela a receber de hoje em diante.
         </div>
 
         <div v-if="contasReceber.length > itensPorPaginaReceber" class="pagination">
