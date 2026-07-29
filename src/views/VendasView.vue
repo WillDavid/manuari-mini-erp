@@ -568,7 +568,7 @@ export default {
       const valorParcela = Number((Number(venda.total_final) / parcelas).toFixed(2))
       const dataVenda = venda.data_venda || new Date().toISOString().split('T')[0]
       const hojeStr = new Date().toISOString().split('T')[0]
-      const isCreditoParcelado = venda.forma_pagamento === 'Credito' && parcelas > 1
+      const isCredito = venda.forma_pagamento === 'Credito'
 
       for (let i = 1; i <= parcelas; i++) {
         const dataVencimento = new Date(dataVenda + 'T12:00:00')
@@ -580,7 +580,7 @@ export default {
           valorFinalParcela = Number((Number(venda.total_final) - (valorParcela * (parcelas - 1))).toFixed(2))
         }
 
-        if (isCreditoParcelado) {
+        if (isCredito) {
           const { error: errConta } = await supabase.from('fluxo_caixa_contas_receber').insert([{
             venda_id: vendaSalva.id,
             descricao: `${venda.cliente || 'Cliente'} — Parcela ${i}/${parcelas}`,
